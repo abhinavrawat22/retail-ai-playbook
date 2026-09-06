@@ -2339,7 +2339,7 @@
 
     function escapeHtml(str) {
       if (!str) return '';
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     // Global Search Function
@@ -2356,14 +2356,19 @@
       let matches = [];
       textNodes.forEach(node => {
         const text = node.textContent;
-        if (text.toLowerCase().includes(q)) {
+        const matchIdx = text.toLowerCase().indexOf(q);
+        if (matchIdx !== -1) {
           const parentPanel = node.closest('.glass-panel');
           const panelTitle = parentPanel ? parentPanel.querySelector('.section-title, .hero-title')?.textContent : "Playbook Section";
           const panelId = parentPanel ? parentPanel.id : "";
 
+          const start = Math.max(0, matchIdx - 25);
+          const end = Math.min(text.length, matchIdx + 65);
+          const snippetText = (start > 0 ? '...' : '') + text.substring(start, end) + (end < text.length ? '...' : '');
+
           matches.push({
             title: panelTitle || "Topic Match",
-            snippet: text.length > 80 ? text.substring(0, 80) + "..." : text,
+            snippet: snippetText,
             id: panelId
           });
         }
