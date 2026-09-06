@@ -1,0 +1,2405 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCS North America - AI Implementation Playbook for Retail</title>
+  <style>
+    /* CSS Variables for Dark Futuristic Theme & Light Mode */
+    :root {
+      --bg-primary: #0a0e27;
+      --bg-secondary: #121735;
+      --bg-card: rgba(22, 28, 62, 0.75);
+      --bg-card-hover: rgba(30, 38, 80, 0.9);
+      --bg-glass: rgba(18, 23, 53, 0.85);
+      --border-color: rgba(0, 217, 255, 0.2);
+      --border-glow: rgba(0, 217, 255, 0.5);
+      
+      --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-bright: #ffffff;
+      
+      --cyan: #00d9ff;
+      --pink: #ff006e;
+      --purple: #b800e6;
+      --gold: #ffd700;
+      --green: #00f5d4;
+      --orange: #ff9e00;
+      
+      --shadow-cyan: 0 0 15px rgba(0, 217, 255, 0.35);
+      --shadow-pink: 0 0 15px rgba(255, 0, 110, 0.35);
+      --shadow-purple: 0 0 15px rgba(184, 0, 230, 0.35);
+      --shadow-gold: 0 0 15px rgba(255, 215, 0, 0.35);
+      
+      --glow-text-cyan: 0 0 8px rgba(0, 217, 255, 0.7);
+      --glow-text-pink: 0 0 8px rgba(255, 0, 110, 0.7);
+      
+      --sidebar-width: 310px;
+      --header-height: 70px;
+      --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #f0f4f9;
+      --bg-secondary: #ffffff;
+      --bg-card: rgba(255, 255, 255, 0.95);
+      --bg-card-hover: rgba(240, 245, 255, 1);
+      --bg-glass: rgba(255, 255, 255, 0.9);
+      --border-color: rgba(0, 102, 204, 0.2);
+      --border-glow: rgba(0, 102, 204, 0.4);
+      
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --text-bright: #0f172a;
+      
+      --cyan: #0077cc;
+      --pink: #d6005c;
+      --purple: #8e00b3;
+      --gold: #c79000;
+      --green: #008a5e;
+      --orange: #d97000;
+      
+      --shadow-cyan: 0 4px 15px rgba(0, 119, 204, 0.15);
+      --shadow-pink: 0 4px 15px rgba(214, 0, 92, 0.15);
+      --shadow-purple: 0 4px 15px rgba(142, 0, 179, 0.15);
+      --shadow-gold: 0 4px 15px rgba(199, 144, 0, 0.15);
+      
+      --glow-text-cyan: none;
+      --glow-text-pink: none;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      line-height: 1.65;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(0, 217, 255, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(184, 0, 230, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(255, 0, 110, 0.03) 0%, transparent 60%);
+      background-attachment: fixed;
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 217, 255, 0.3);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--cyan);
+      box-shadow: var(--shadow-cyan);
+    }
+
+    /* Top Navigation Header */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.1rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 6px;
+      box-shadow: var(--shadow-cyan);
+      letter-spacing: 1px;
+    }
+
+    .logo-text {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: 0.5px;
+    }
+
+    .logo-subtitle {
+      font-size: 0.72rem;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      display: block;
+      font-weight: 600;
+    }
+
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-left: 1px solid var(--border-color);
+      padding-left: 1.25rem;
+    }
+
+    .breadcrumbs span.current {
+      color: var(--cyan);
+      font-weight: 600;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .search-box {
+      position: relative;
+      width: 280px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: rgba(18, 23, 53, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 0.45rem 1rem 0.45rem 2.4rem;
+      color: var(--text-main);
+      font-size: 0.88rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    [data-theme="light"] .search-input {
+      background: #ffffff;
+    }
+
+    .search-input:focus {
+      border-color: var(--cyan);
+      box-shadow: var(--shadow-cyan);
+      width: 320px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--cyan);
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    .search-results {
+      position: absolute;
+      top: 110%;
+      left: 0;
+      right: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      max-height: 350px;
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 1001;
+      display: none;
+    }
+
+    .search-results.active {
+      display: block;
+    }
+
+    .search-result-item {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .search-result-item:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .search-result-title {
+      font-weight: 600;
+      color: var(--cyan);
+      font-size: 0.88rem;
+    }
+
+    .search-result-snippet {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    .header-btn {
+      background: rgba(0, 217, 255, 0.1);
+      border: 1px solid var(--border-color);
+      color: var(--cyan);
+      padding: 0.45rem 0.9rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .header-btn:hover {
+      background: var(--cyan);
+      color: #000;
+      box-shadow: var(--shadow-cyan);
+    }
+
+    .theme-toggle-btn {
+      background: rgba(184, 0, 230, 0.15);
+      border: 1px solid rgba(184, 0, 230, 0.3);
+      color: var(--purple);
+    }
+
+    .theme-toggle-btn:hover {
+      background: var(--purple);
+      color: #fff;
+      box-shadow: var(--shadow-purple);
+    }
+
+    /* Layout Wrapper */
+    .app-layout {
+      display: flex;
+      margin-top: var(--header-height);
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* Sticky Sidebar Navigation */
+    aside.sidebar {
+      width: var(--sidebar-width);
+      position: fixed;
+      top: var(--header-height);
+      bottom: 0;
+      left: 0;
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-color);
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      z-index: 900;
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar-section-title {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin: 1.25rem 0 0.5rem 0.75rem;
+      font-weight: 700;
+    }
+
+    .sidebar-menu {
+      list-style: none;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.55rem 0.85rem;
+      color: var(--text-main);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 8px;
+      margin-bottom: 0.25rem;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .sidebar-link:hover {
+      background: rgba(0, 217, 255, 0.08);
+      color: var(--cyan);
+      padding-left: 1.1rem;
+    }
+
+    .sidebar-link.active {
+      background: linear-gradient(90deg, rgba(0, 217, 255, 0.18), rgba(184, 0, 230, 0.1));
+      color: var(--cyan);
+      font-weight: 600;
+      border-left: 3px solid var(--cyan);
+      box-shadow: var(--shadow-cyan);
+    }
+
+    .sidebar-link .icon {
+      font-size: 0.95rem;
+      width: 20px;
+      text-align: center;
+    }
+
+    .sidebar-badge {
+      margin-left: auto;
+      font-size: 0.68rem;
+      background: rgba(255, 0, 110, 0.2);
+      color: var(--pink);
+      padding: 0.15rem 0.45rem;
+      border-radius: 10px;
+      font-weight: 700;
+      border: 1px solid rgba(255,0,110,0.3);
+    }
+
+    /* Main Content Area */
+    main.main-content {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      padding: 2rem 2.5rem 4rem 2.5rem;
+      max-width: 1400px;
+    }
+
+    /* Content Cards & Glass Panels */
+    .glass-panel {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glass-panel:hover {
+      border-color: var(--border-glow);
+    }
+
+    .glass-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--purple), transparent);
+      opacity: 0.7;
+    }
+
+    .section-header {
+      margin-bottom: 1.75rem;
+      position: relative;
+    }
+
+    .section-tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.8px;
+      color: var(--cyan);
+      margin-bottom: 0.5rem;
+      background: rgba(0, 217, 255, 0.1);
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      border: 1px solid rgba(0, 217, 255, 0.25);
+    }
+
+    .section-title {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-bright);
+      letter-spacing: -0.5px;
+      line-height: 1.25;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 950px;
+    }
+
+    /* Hero Banner for Executive Summary */
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(18, 23, 53, 0.95), rgba(30, 20, 60, 0.95));
+      border: 1px solid var(--border-glow);
+      border-radius: 20px;
+      padding: 3rem 2.5rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      box-shadow: 0 10px 40px rgba(0, 217, 255, 0.15);
+      overflow: hidden;
+    }
+
+    .hero-banner::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(0,217,255,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-title {
+      font-size: 2.4rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #ffffff 30%, var(--cyan) 70%, var(--pink) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .hero-desc {
+      font-size: 1.1rem;
+      color: var(--text-main);
+      max-width: 950px;
+      margin-bottom: 2rem;
+      line-height: 1.7;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+
+    .stat-card {
+      background: rgba(10, 14, 39, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    [data-theme="light"] .stat-card {
+      background: #ffffff;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--cyan);
+      box-shadow: var(--shadow-cyan);
+    }
+
+    .stat-number {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--cyan);
+      text-shadow: var(--glow-text-cyan);
+      line-height: 1;
+      margin-bottom: 0.4rem;
+    }
+
+    .stat-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    /* Accordion Components */
+    .accordion {
+      margin-top: 1.5rem;
+    }
+
+    .accordion-item {
+      background: rgba(18, 23, 53, 0.5);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 0.85rem;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    [data-theme="light"] .accordion-item {
+      background: #ffffff;
+    }
+
+    .accordion-item.active {
+      border-color: var(--cyan);
+      box-shadow: 0 0 15px rgba(0,217,255,0.15);
+    }
+
+    .accordion-header {
+      padding: 1.2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text-bright);
+      transition: background 0.2s ease;
+    }
+
+    .accordion-header:hover {
+      background: rgba(0, 217, 255, 0.05);
+    }
+
+    .accordion-icon {
+      font-size: 1.2rem;
+      color: var(--cyan);
+      transition: transform 0.3s ease;
+    }
+
+    .accordion-item.active .accordion-icon {
+      transform: rotate(180deg);
+    }
+
+    .accordion-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.4s ease;
+      padding: 0 1.5rem;
+      color: var(--text-main);
+      font-size: 0.95rem;
+    }
+
+    .accordion-item.active .accordion-content {
+      max-height: 2500px;
+      padding: 1rem 1.5rem 1.5rem 1.5rem;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* Custom Tables */
+    .custom-table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.5rem 0;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .custom-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    .custom-table th {
+      background: rgba(10, 14, 39, 0.85);
+      color: var(--cyan);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-size: 0.78rem;
+      padding: 1rem 1.2rem;
+      border-bottom: 2px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    [data-theme="light"] .custom-table th {
+      background: #e2e8f0;
+    }
+
+    .custom-table td {
+      padding: 0.9rem 1.2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      vertical-align: top;
+    }
+
+    [data-theme="light"] .custom-table td {
+      border-bottom-color: rgba(0,0,0,0.06);
+    }
+
+    .custom-table tr:hover {
+      background: rgba(0, 217, 255, 0.04);
+    }
+
+    /* Tag & Pill Badges */
+    .pill {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pill-cyan { background: rgba(0, 217, 255, 0.15); color: var(--cyan); border: 1px solid rgba(0, 217, 255, 0.3); }
+    .pill-pink { background: rgba(255, 0, 110, 0.15); color: var(--pink); border: 1px solid rgba(255, 0, 110, 0.3); }
+    .pill-purple { background: rgba(184, 0, 230, 0.15); color: var(--purple); border: 1px solid rgba(184, 0, 230, 0.3); }
+    .pill-gold { background: rgba(255, 215, 0, 0.15); color: var(--gold); border: 1px solid rgba(255, 215, 0, 0.3); }
+    .pill-green { background: rgba(0, 245, 212, 0.15); color: var(--green); border: 1px solid rgba(0, 245, 212, 0.3); }
+
+    /* Interactive Tab Control */
+    .tab-container {
+      margin: 1.5rem 0;
+    }
+
+    .tab-buttons {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 0.6rem 1.25rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      color: var(--cyan);
+      background: rgba(0, 217, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      background: rgba(0, 217, 255, 0.15);
+      color: var(--cyan);
+      border-color: var(--border-glow);
+      box-shadow: var(--shadow-cyan);
+    }
+
+    .tab-content {
+      display: none;
+      padding-top: 1.5rem;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Archetype Cards Grid */
+    .archetype-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .archetype-card {
+      background: rgba(18, 23, 53, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    [data-theme="light"] .archetype-card {
+      background: #ffffff;
+    }
+
+    .archetype-card:hover {
+      border-color: var(--cyan);
+      box-shadow: var(--shadow-cyan);
+      transform: translateY(-3px);
+    }
+
+    .archetype-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .archetype-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      background: linear-gradient(135deg, rgba(0,217,255,0.2), rgba(184,0,230,0.2));
+      border: 1px solid var(--border-color);
+      color: var(--cyan);
+    }
+
+    .archetype-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    /* Diagnostic Assessment Questionnaire Styling */
+    .assessment-container {
+      background: rgba(10, 14, 39, 0.7);
+      border: 1px solid var(--border-glow);
+      border-radius: 16px;
+      padding: 2rem;
+      margin: 2rem 0;
+    }
+
+    .assessment-progress-bar {
+      width: 100%;
+      height: 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 5px;
+      overflow: hidden;
+      margin: 1rem 0 2rem 0;
+    }
+
+    .assessment-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--cyan), var(--purple), var(--pink));
+      transition: width 0.3s ease;
+    }
+
+    .question-card {
+      background: rgba(18, 23, 53, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    [data-theme="light"] .question-card {
+      background: #ffffff;
+    }
+
+    .question-title {
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.5rem;
+    }
+
+    .option-btn {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      text-align: left;
+      transition: all 0.2s ease;
+    }
+
+    .option-btn:hover {
+      background: rgba(0, 217, 255, 0.1);
+      border-color: var(--cyan);
+    }
+
+    .option-btn.selected {
+      background: rgba(0, 217, 255, 0.25);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      font-weight: 700;
+      box-shadow: var(--shadow-cyan);
+    }
+
+    /* Heatmap Scoring Grid */
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 0.85rem;
+      margin: 1.5rem 0;
+    }
+
+    .heatmap-cell {
+      padding: 1rem;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 700;
+      transition: transform 0.3s;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .heatmap-cell:hover {
+      transform: scale(1.05);
+    }
+
+    .heatmap-cell .dim-name {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.4rem;
+    }
+
+    .heatmap-cell .dim-score {
+      font-size: 1.6rem;
+      line-height: 1;
+    }
+
+    /* Roadmap Timeline */
+    .timeline {
+      position: relative;
+      margin: 2rem 0;
+      padding-left: 2rem;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 7px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, var(--cyan), var(--purple), var(--pink));
+    }
+
+    .timeline-node {
+      position: relative;
+      margin-bottom: 2rem;
+    }
+
+    .timeline-node::before {
+      content: '';
+      position: absolute;
+      left: -2rem;
+      top: 4px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--bg-primary);
+      border: 3px solid var(--cyan);
+      box-shadow: var(--shadow-cyan);
+    }
+
+    .timeline-content {
+      background: rgba(18, 23, 53, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    [data-theme="light"] .timeline-content {
+      background: #ffffff;
+    }
+
+    /* Print CSS */
+    @media print {
+      header, aside.sidebar, .theme-toggle-btn, .search-box {
+        display: none !important;
+      }
+      main.main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+      }
+      .glass-panel {
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        background: #fff !important;
+        color: #000 !important;
+      }
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+    }
+
+    /* Responsive Mobile Adjustments */
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        transform: translateX(-100%);
+      }
+      aside.sidebar.mobile-open {
+        transform: translateX(0);
+      }
+      main.main-content {
+        margin-left: 0;
+        padding: 1.5rem;
+      }
+      .mobile-menu-btn {
+        display: block !important;
+      }
+    }
+
+    .mobile-menu-btn {
+      display: none;
+      background: transparent;
+      border: none;
+      color: var(--cyan);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="header-left">
+      <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" aria-label="Toggle Navigation">☰</button>
+      <a href="#" class="logo-container">
+        <span class="logo-badge">TCS</span>
+        <div>
+          <span class="logo-text">Retail AI Playbook</span>
+          <span class="logo-subtitle">North America CXO Guide</span>
+        </div>
+      </a>
+      <div class="breadcrumbs">
+        <span>Playbook</span> &gt;
+        <span class="current" id="current-breadcrumb">Executive Summary</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="global-search" placeholder="Search topics, KPIs, frameworks..." oninput="handleSearch(this.value)">
+        <div class="search-results" id="search-results"></div>
+      </div>
+      <button class="header-btn theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle Theme">
+        <span id="theme-icon">🌙</span> <span id="theme-text">Dark</span>
+      </button>
+      <button class="header-btn" onclick="window.print()" aria-label="Print Playbook">
+        🖨️ Print / PDF
+      </button>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <!-- Sticky Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-section-title">Navigation</div>
+      <ul class="sidebar-menu">
+        <li><a href="#exec-summary" class="sidebar-link active" onclick="setActiveNav(this)"><span class="icon">📊</span> Executive Summary</a></li>
+        <li><a href="#top-10-decisions" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">⚡</span> Top 10 CXO Decisions <span class="sidebar-badge">12 Wks</span></a></li>
+        
+        <div class="sidebar-section-title">Core Playbook Sections</div>
+        <li><a href="#section-1" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">I</span> Industry Context & Research</a></li>
+        <li><a href="#section-2" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">II</span> AI Value Thesis & Matrix</a></li>
+        <li><a href="#section-3" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">III</span> Target Operating Model</a></li>
+        <li><a href="#section-4" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">IV</span> Workforce Design</a></li>
+        <li><a href="#section-5" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">V</span> Organization Structure & RACI</a></li>
+        <li><a href="#section-6" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">VI</span> Readiness & 40+ Diagnostic</a></li>
+        <li><a href="#section-7" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">VII</span> Data, Tech & MLOps Blueprint</a></li>
+        <li><a href="#section-8" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">VIII</span> Implementation & 3-Horizon</a></li>
+        <li><a href="#section-9" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">IX</span> KPI & Value Realization</a></li>
+        <li><a href="#section-10" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">X</span> CXO Action Guides (90-Day)</a></li>
+        <li><a href="#section-11" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">XI</span> Reusable Assets & Risk Register</a></li>
+        
+        <div class="sidebar-section-title">Retail Archetypes</div>
+        <li><a href="#archetype-grocery" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">🛒</span> Grocery Chains</a></li>
+        <li><a href="#archetype-fashion" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">👗</span> Fashion & Apparel</a></li>
+        <li><a href="#archetype-specialty" class="sidebar-link" onclick="setActiveNav(this)"><span class="icon">📦</span> Specialty / Big-Box</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Body -->
+    <main class="main-content">
+
+      <!-- Executive Summary -->
+      <section id="exec-summary" class="glass-panel">
+        <div class="hero-banner">
+          <span class="section-tag">Executive Summary</span>
+          <h1 class="hero-title">TCS AI Implementation Playbook for Retail</h1>
+          <p class="hero-desc">
+            A strategic, CXO-level blueprint for North American retail leaders navigating margin compression, demand volatility, labor constraints, and rapid technological shift. Designed by TCS North America to guide enterprise-wide Artificial Intelligence deployment from pilot validation to scaled business value.
+          </p>
+
+          <div class="stat-grid">
+            <div class="stat-card">
+              <div class="stat-number">+150-300 bps</div>
+              <div class="stat-label">EBITDA Margin Lift</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">25-35%</div>
+              <div class="stat-label">Forecast Error Reduction</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">15-25%</div>
+              <div class="stat-label">Working Capital Optimization</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">40-60%</div>
+              <div class="stat-label">Hyper-Personalization ROI</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+          <div style="background: rgba(10, 14, 39, 0.6); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
+            <h3 style="color: var(--cyan); margin-bottom: 0.75rem; font-size: 1.1rem;">🎯 Strategic Imperative</h3>
+            <p style="font-size: 0.92rem; color: var(--text-main);">
+              Artificial Intelligence in retail has transitioned from experimental digital innovation to core operating leverage. Retailers who treat AI as an isolated IT initiative risk falling into "pilot purgatory", where disconnected use cases yield sub-scale returns while burdening legacy architecture.
+            </p>
+          </div>
+
+          <div style="background: rgba(10, 14, 39, 0.6); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
+            <h3 style="color: var(--pink); margin-bottom: 0.75rem; font-size: 1.1rem;">🚀 TCS Playbook Architecture</h3>
+            <p style="font-size: 0.92rem; color: var(--text-main);">
+              This playbook codifies TCS’s cross-industry domain expertise into an actionable operating framework spanning Target Operating Models (TOM), 360-degree data foundations, MLOps governance, workforce upskilling, and P&amp;L-linked KPI trees.
+            </p>
+          </div>
+
+          <div style="background: rgba(10, 14, 39, 0.6); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
+            <h3 style="color: var(--purple); margin-bottom: 0.75rem; font-size: 1.1rem;">💡 Multi-Archetype Scope</h3>
+            <p style="font-size: 0.92rem; color: var(--text-main);">
+              Includes tailored blueprints and deep-dives for 3 primary North American retail archetypes: Fresh Grocery Chains, Fashion &amp; Apparel, and Specialty / Big-Box Retailers with distinct operating economics and data dependencies.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Top 10 CXO Decisions -->
+      <section id="top-10-decisions" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">First 12 Weeks Horizon</span>
+          <h2 class="section-title">Top 10 Decisions for CXOs in First 12 Weeks</h2>
+          <p class="section-subtitle">Critical governance, capital allocation, and operating model choices that determine AI transformation trajectory and risk profile.</p>
+        </div>
+
+        <div style="margin-bottom: 1rem; font-size: 0.88rem; color: var(--cyan); font-weight: 600;">
+          💡 Interactive CXO Decision Tracker: Click checkbox as your executive steering committee approves each gate.
+        </div>
+
+        <div class="custom-table-wrapper">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">Status</th>
+                <th>Decision Gate</th>
+                <th>Primary Owner</th>
+                <th>Timeframe</th>
+                <th>Strategic Option Choices</th>
+                <th>Pass / Fail Criteria</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox" style="accent-color: var(--cyan); transform: scale(1.3);"></td>
+                <td><strong>1. Operating Model Design</strong></td>
+                <td><span class="pill pill-cyan">CEO / COO</span></td>
+                <td>Week 1-2</td>
+                <td>Federated vs. Centralized CoE vs. Hybrid Hub-and-Spoke</td>
+                <td>Signed CoE charter with defined decision rights &amp; BU funding policy</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" style="accent-color: var(--cyan); transform: scale(1.3);"></td>
+                <td><strong>2. Value Pool Selection</strong></td>
+                <td><span class="pill pill-gold">CFO / CDO</span></td>
+                <td>Week 2-3</td>
+                <td>Margin defense (pricing/shrink) vs. Growth (personalization)</td>
+                <td>Top 5 high-EBITDA use cases prioritized with baseline P&amp;L targets</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" style="accent-color: var(--cyan); transform: scale(1.3);"></td>
+                <td><strong>3. Data Foundation Strategy</strong></td>
+                <td><span class="pill pill-purple">CIO / CDO</span></td>
+                <td>Week 3-4</td>
+                <td>Modernize legacy data warehouse vs. Retail Data Lakehouse</td>
+                <td>Single source of truth for Product-360 &amp; Customer-360 operational</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" style="accent-color: var(--cyan); transform: scale(1.3);"></td>
+                <td><strong>4. Responsible AI &amp; Risk Policy</strong></td>
+                <td><span class="pill pill-pink">General Counsel / CRO</span></td>
+                <td>Week 4-5</td>
+                <td>Strict human-in-the-loop vs. Autonomous model execution</td>
+                <td>Approved Risk Register, IP protection guidelines, and model audit framework</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" style="accent-color: var(--cyan); transform: scale(1.3);"></td>
+                <td><strong>5. MLOps &amp; LLMOps Stack</strong></td>
+                <td><span class="pill pill-purple">CIO / CTO</span></td>
+                <td>Week 5-6</td>
+                <td>Proprietary Hyperscaler Stack vs. Open Multi-Cloud MLOps</td>
+                <td>Automated deployment pipeline &amp; model drift monitoring established</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" style="accent-color: var(--cyan); transform: scale(1.3);"></td>
+                <td><strong>6. Talent &amp; Partner Strategy</strong></td>
+                <td><span class="pill pill-green">CHRO / CDO</span></td>
+                <td>Week 6-7</td>
+                <td>In-house build vs. Strategic SI Partner (TCS Co-innovation)</td>
+                <td>Core pods staffed (AI PM, Data Engineers, Domain Translators)</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" style="accent-color: var(--cyan); transform: scale(1.3);"></td>
+                <td><strong>7. Store Associate Enablement</strong></td>
+                <td><span class="pill pill-cyan">COO / Head Stores</span></td>
+                <td>Week 7-8</td>
+                <td>Task automation vs. AI Copilot for frontline associates</td>
+                <td>Frontline UX testing completed with &gt;80% store associate task readiness</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" style="accent-color: var(--cyan); transform: scale(1.3);"></td>
+                <td><strong>8. Funding Gate Mechanism</strong></td>
+                <td><span class="pill pill-gold">CFO</span></td>
+                <td>Week 8-9</td>
+                <td>Annual capital budget vs. Venture-style quarterly stage-gates</td>
+                <td>Stage-gate funding criteria mapped to pilot milestone performance</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" style="accent-color: var(--cyan); transform: scale(1.3);"></td>
+                <td><strong>9. Ecosystem &amp; SaaS Integration</strong></td>
+                <td><span class="pill pill-purple">CIO</span></td>
+                <td>Week 10-11</td>
+                <td>Composable headless API vs. Monolithic SaaS suite extension</td>
+                <td>API contracts and data latency SLA defined across POS &amp; ERP</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" style="accent-color: var(--cyan); transform: scale(1.3);"></td>
+                <td><strong>10. Scale &amp; Rollout Governance</strong></td>
+                <td><span class="pill pill-pink">CEO / Steering Comm</span></td>
+                <td>Week 12</td>
+                <td>Phased banner-by-banner rollout vs. Big-bang region deployment</td>
+                <td>Steering committee dashboard live with P&amp;L impact attribution tracking</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section I: Retail Industry Context & Research -->
+      <section id="section-1" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Section I</span>
+          <h2 class="section-title">Retail Industry Context &amp; Research</h2>
+          <p class="section-subtitle">Macroeconomic shifts, segment pressures in North America, and competitive AI maturity benchmarks.</p>
+        </div>
+
+        <div class="tab-container">
+          <div class="tab-buttons">
+            <button class="tab-btn active" onclick="openTab(event, 'sec1-macro')">NA Market Dynamics</button>
+            <button class="tab-btn" onclick="openTab(event, 'sec1-pressures')">Segment Pressures</button>
+            <button class="tab-btn" onclick="openTab(event, 'sec1-benchmarks')">AI Benchmark Archetypes</button>
+          </div>
+
+          <div id="sec1-macro" class="tab-content active">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+              <div style="background: rgba(10, 14, 39, 0.5); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                <h4 style="color: var(--cyan); margin-bottom: 0.5rem;">📈 Margin Erosion &amp; Inflation</h4>
+                <p style="font-size: 0.9rem;">North American retailers face persistent wage inflation (store hourly rates up 18-25% since 2021) and elevated cost of goods sold. Passing price increases to consumers has hit demand resistance, making cost structure optimization through AI mandatory.</p>
+              </div>
+
+              <div style="background: rgba(10, 14, 39, 0.5); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                <h4 style="color: var(--pink); margin-bottom: 0.5rem;">🚨 Shrink &amp; Organized Retail Crime</h4>
+                <p style="font-size: 0.9rem;">Total retail shrink in NA reached $112B+ in 2023 (~1.6% of sales). Computer vision, anomaly detection, and predictive risk scoring are becoming core investments for store operations and loss prevention teams.</p>
+              </div>
+
+              <div style="background: rgba(10, 14, 39, 0.5); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                <h4 style="color: var(--purple); margin-bottom: 0.5rem;">📦 Inventory Volatility &amp; Lead Times</h4>
+                <p style="font-size: 0.9rem;">Demand forecasting based on historical time-series alone fails due to frequent supply disruptions and social-media-driven demand spikes. Generative AI sensing and probabilistic demand models are replacing legacy deterministic planning.</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="sec1-pressures" class="tab-content">
+            <div class="custom-table-wrapper">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Retail Segment</th>
+                    <th>Average Gross Margin</th>
+                    <th>Primary Operational Bottleneck</th>
+                    <th>AI Priority Vector</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong style="color:var(--green)">Fresh Grocery Chains</strong></td>
+                    <td>20% - 26% (Net: 1.5-3%)</td>
+                    <td>Fresh produce spoilage waste (5-8%) &amp; thin basket margins</td>
+                    <td>Hyper-local demand sensing, dynamic fresh markdown, automated replenishment</td>
+                  </tr>
+                  <tr>
+                    <td><strong style="color:var(--pink)">Fashion &amp; Apparel</strong></td>
+                    <td>45% - 58% (Net: 4-8%)</td>
+                    <td>Markdown losses (20-30% volume sold on clearance) &amp; high return rates (30%+)</td>
+                    <td>AI trend forecasting, size/fit optimization, markdown timing algorithms</td>
+                  </tr>
+                  <tr>
+                    <td><strong style="color:var(--cyan)">Specialty &amp; Big-Box</strong></td>
+                    <td>32% - 42% (Net: 5-9%)</td>
+                    <td>High store labor overhead &amp; omnichannel fulfillment friction</td>
+                    <td>Associate AI copilot, clienteling engines, shrink prevention vision AI</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="sec1-benchmarks" class="tab-content">
+            <div class="archetype-grid">
+              <div class="archetype-card">
+                <div class="archetype-header">
+                  <div class="archetype-icon">🏆</div>
+                  <div>
+                    <div class="archetype-title">AI Leaders (Top 10%)</div>
+                    <span class="pill pill-cyan">Amazon, Walmart, Target</span>
+                  </div>
+                </div>
+                <p style="font-size: 0.88rem; color: var(--text-main);">
+                  AI fully integrated into daily executive decisions. Proprietary MLOps platform, automated inventory micro-fulfillment, dynamic personalized pricing, and genAI store associate copilots. Average 350+ bps EBITDA advantage over peers.
+                </p>
+              </div>
+
+              <div class="archetype-card">
+                <div class="archetype-header">
+                  <div class="archetype-icon">⚡</div>
+                  <div>
+                    <div class="archetype-title">Fast Followers (40%)</div>
+                    <span class="pill pill-purple">Regional Grocers, Specialty Brands</span>
+                  </div>
+                </div>
+                <p style="font-size: 0.88rem; color: var(--text-main);">
+                  Deploying packaged AI SaaS solutions (e.g. Blue Yonder, Salesforce Einstein, Manhattan). Targeted custom models for high-value use cases (markdowns, fraud). Facing integration bottlenecks and talent scarcity.
+                </p>
+              </div>
+
+              <div class="archetype-card">
+                <div class="archetype-header">
+                  <div class="archetype-icon">🐌</div>
+                  <div>
+                    <div class="archetype-title">Laggards (50%)</div>
+                    <span class="pill pill-pink">Legacy Regional Chains</span>
+                  </div>
+                </div>
+                <p style="font-size: 0.88rem; color: var(--text-main);">
+                  Siloed pilots, heavy dependence on legacy ERP/POS spreadsheets, manual weekly store orders. Struggling with data quality and resistant store culture. Margin compression placing long-term survival at risk.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section II: AI Value Thesis for Retail -->
+      <section id="section-2" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Section II</span>
+          <h2 class="section-title">AI Value Thesis for Retail</h2>
+          <p class="section-subtitle">Enterprise value pools across retail functions, interactive use-case prioritization matrix, and implementation feasibility scoring.</p>
+        </div>
+
+        <div style="background: rgba(10, 14, 39, 0.6); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 2rem;">
+          <h3 style="color: var(--cyan); margin-bottom: 0.75rem; font-size: 1.1rem;">📊 Interactive Use-Case Prioritization Chart</h3>
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Filter by business function or retail archetype. Bubble height indicates EBITDA impact; horizontal position represents implementation feasibility. Hover over bubbles for details.
+          </p>
+
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <button class="header-btn" onclick="filterBubbleChart('all')" style="font-size: 0.78rem;">All Functions</button>
+            <button class="header-btn" onclick="filterBubbleChart('supply')" style="font-size: 0.78rem;">Supply Chain &amp; Inventory</button>
+            <button class="header-btn" onclick="filterBubbleChart('merch')" style="font-size: 0.78rem;">Merchandising &amp; Pricing</button>
+            <button class="header-btn" onclick="filterBubbleChart('stores')" style="font-size: 0.78rem;">Store Operations</button>
+            <button class="header-btn" onclick="filterBubbleChart('marketing')" style="font-size: 0.78rem;">Marketing &amp; E-commerce</button>
+          </div>
+
+          <!-- SVG Interactive Bubble Chart -->
+          <div style="position: relative; width: 100%; height: 380px; background: rgba(18,23,53,0.8); border-radius: 12px; border: 1px solid var(--border-color); padding: 1rem;">
+            <svg id="bubble-chart-svg" width="100%" height="100%" viewBox="0 0 800 320" style="overflow: visible;">
+              <!-- Grid Lines -->
+              <line x1="60" y1="260" x2="760" y2="260" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+              <line x1="60" y1="180" x2="760" y2="180" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4" />
+              <line x1="60" y1="100" x2="760" y2="100" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4" />
+              <line x1="60" y1="20" x2="760" y2="20" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+              
+              <line x1="60" y1="20" x2="60" y2="260" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+              <line x1="290" y1="20" x2="290" y2="260" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4" />
+              <line x1="520" y1="20" x2="520" y2="260" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4" />
+              <line x1="760" y1="20" x2="760" y2="260" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+
+              <!-- Axis Labels -->
+              <text x="410" y="295" fill="var(--text-muted)" font-size="12" text-anchor="middle" font-weight="600">Implementation Feasibility &amp; Speed to Value (Low ➔ High)</text>
+              <text x="20" y="140" fill="var(--text-muted)" font-size="12" text-anchor="middle" font-weight="600" transform="rotate(-90 20 140)">EBITDA Financial Impact ($M)</text>
+
+              <!-- Quadrant Labels -->
+              <text x="180" y="45" fill="rgba(255,0,110,0.5)" font-size="13" font-weight="700">Strategic Transformation (High Impact, Hard)</text>
+              <text x="620" y="45" fill="rgba(0,217,255,0.7)" font-size="13" font-weight="700">⭐ QUICK WIN ZONE (High Impact, Easy)</text>
+              <text x="180" y="240" fill="rgba(255,255,255,0.3)" font-size="12">Long-term R&amp;D</text>
+              <text x="620" y="240" fill="rgba(255,255,255,0.3)" font-size="12">Tactical Automation</text>
+
+              <!-- Bubbles -->
+              <!-- Demand Sensing (Quick Win) -->
+              <g class="bubble-group" data-cat="supply">
+                <circle cx="640" cy="65" r="28" fill="rgba(0,217,255,0.35)" stroke="var(--cyan)" stroke-width="2" style="cursor:pointer; transition:all 0.3s;">
+                  <title>Demand Sensing &amp; Replenishment&#10;Impact: $45M EBITDA&#10;Feasibility: 85%&#10;Time to Value: 4 Months</title>
+                </circle>
+                <text x="640" y="69" fill="#fff" font-size="10" text-anchor="middle" font-weight="700" pointer-events="none">Demand Sensing</text>
+              </g>
+
+              <!-- Dynamic Markdown (Quick Win) -->
+              <g class="bubble-group" data-cat="merch">
+                <circle cx="580" cy="90" r="24" fill="rgba(255,0,110,0.35)" stroke="var(--pink)" stroke-width="2" style="cursor:pointer; transition:all 0.3s;">
+                  <title>Dynamic Markdown Optimization&#10;Impact: $32M EBITDA&#10;Feasibility: 78%&#10;Time to Value: 5 Months</title>
+                </circle>
+                <text x="580" y="94" fill="#fff" font-size="10" text-anchor="middle" font-weight="700" pointer-events="none">Markdown Opt</text>
+              </g>
+
+              <!-- Associate Copilot (Quick Win) -->
+              <g class="bubble-group" data-cat="stores">
+                <circle cx="680" cy="115" r="22" fill="rgba(184,0,230,0.35)" stroke="var(--purple)" stroke-width="2" style="cursor:pointer; transition:all 0.3s;">
+                  <title>Store Associate AI Copilot&#10;Impact: $22M EBITDA&#10;Feasibility: 88%&#10;Time to Value: 3 Months</title>
+                </circle>
+                <text x="680" y="119" fill="#fff" font-size="10" text-anchor="middle" font-weight="700" pointer-events="none">Store Copilot</text>
+              </g>
+
+              <!-- Hyper Personalization (Quick Win) -->
+              <g class="bubble-group" data-cat="marketing">
+                <circle cx="610" cy="140" r="26" fill="rgba(255,215,0,0.35)" stroke="var(--gold)" stroke-width="2" style="cursor:pointer; transition:all 0.3s;">
+                  <title>1:1 Hyper-Personalization Engine&#10;Impact: $38M EBITDA&#10;Feasibility: 75%&#10;Time to Value: 6 Months</title>
+                </circle>
+                <text x="610" y="144" fill="#fff" font-size="10" text-anchor="middle" font-weight="700" pointer-events="none">1:1 Personalization</text>
+              </g>
+
+              <!-- Autonomous Supply Chain (Strategic) -->
+              <g class="bubble-group" data-cat="supply">
+                <circle cx="210" cy="50" r="32" fill="rgba(0,217,255,0.25)" stroke="var(--cyan)" stroke-width="2" style="cursor:pointer; transition:all 0.3s;">
+                  <title>Autonomous Self-Healing Supply Chain&#10;Impact: $65M EBITDA&#10;Feasibility: 35%&#10;Time to Value: 18 Months</title>
+                </circle>
+                <text x="210" y="54" fill="#fff" font-size="10" text-anchor="middle" font-weight="700" pointer-events="none">Autonomous SC</text>
+              </g>
+
+              <!-- Shrink & Loss Prevention Vision AI -->
+              <g class="bubble-group" data-cat="stores">
+                <circle cx="480" cy="110" r="20" fill="rgba(184,0,230,0.35)" stroke="var(--purple)" stroke-width="2" style="cursor:pointer; transition:all 0.3s;">
+                  <title>Vision AI Shrink &amp; Theft Prevention&#10;Impact: $28M EBITDA&#10;Feasibility: 65%&#10;Time to Value: 8 Months</title>
+                </circle>
+                <text x="480" y="114" fill="#fff" font-size="9" text-anchor="middle" font-weight="700" pointer-events="none">Shrink Vision AI</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <h3 style="color: var(--text-bright); margin: 1.5rem 0 1rem 0;">📋 Comprehensive Use-Case Portfolio Matrix</h3>
+        <div class="custom-table-wrapper">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Retail Function</th>
+                <th>AI Use-Case Title</th>
+                <th>EBITDA Impact</th>
+                <th>Feasibility</th>
+                <th>Data Readiness Requirement</th>
+                <th>Time to Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="pill pill-cyan">Supply Chain</span></td>
+                <td><strong>Probabilistic Demand Sensing &amp; Auto-Replenishment</strong></td>
+                <td><strong style="color:var(--green)">High ($30M - $50M)</strong></td>
+                <td><span class="pill pill-green">High (85%)</span></td>
+                <td>POSIX Store Inventory feeds, POS transactions, POS weather API</td>
+                <td>3 - 5 Months</td>
+              </tr>
+              <tr>
+                <td><span class="pill pill-pink">Merchandising</span></td>
+                <td><strong>Algorithmic Markdown &amp; Clearance Timing</strong></td>
+                <td><strong style="color:var(--green)">High ($25M - $40M)</strong></td>
+                <td><span class="pill pill-green">High (80%)</span></td>
+                <td>Product catalog hierarchy, historical sell-through, elasticity models</td>
+                <td>4 - 6 Months</td>
+              </tr>
+              <tr>
+                <td><span class="pill pill-purple">Store Ops</span></td>
+                <td><strong>Frontline Associate GenAI Mobile Copilot</strong></td>
+                <td><strong>Medium ($15M - $25M)</strong></td>
+                <td><span class="pill pill-green">Very High (90%)</span></td>
+                <td>Product knowledge base, planograms, policy documents vectorized</td>
+                <td>2 - 4 Months</td>
+              </tr>
+              <tr>
+                <td><span class="pill pill-gold">Marketing</span></td>
+                <td><strong>Generative Marketing Content &amp; 1:1 Offer Engine</strong></td>
+                <td><strong style="color:var(--green)">High ($20M - $35M)</strong></td>
+                <td><span class="pill pill-green">High (75%)</span></td>
+                <td>Unified Customer-360, CDP profiles, email campaign engagement logs</td>
+                <td>5 - 7 Months</td>
+              </tr>
+              <tr>
+                <td><span class="pill pill-cyan">E-commerce</span></td>
+                <td><strong>Visual Search &amp; Generative Conversational Shopping Assistant</strong></td>
+                <td><strong>Medium ($10M - $20M)</strong></td>
+                <td><span class="pill pill-purple">Medium (65%)</span></td>
+                <td>High-res image catalog embeddings, real-time stock API</td>
+                <td>6 - 8 Months</td>
+              </tr>
+              <tr>
+                <td><span class="pill pill-purple">Loss Prevention</span></td>
+                <td><strong>Self-Checkout Computer Vision &amp; Scan Avoidance Detection</strong></td>
+                <td><strong style="color:var(--green)">High ($20M - $30M)</strong></td>
+                <td><span class="pill pill-purple">Medium (60%)</span></td>
+                <td>Overhead camera RTSP stream, POS register event feeds</td>
+                <td>6 - 9 Months</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section III: Target Operating Model -->
+      <section id="section-3" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Section III</span>
+          <h2 class="section-title">Operating Design (Target Operating Model)</h2>
+          <p class="section-subtitle">Evaluating Centralized vs. Federated vs. Hybrid Hub-and-Spoke AI operating models and CoE mandates.</p>
+        </div>
+
+        <div class="tab-container">
+          <div class="tab-buttons">
+            <button class="tab-btn active" onclick="openTab(event, 'sec3-hybrid')">⭐ Hybrid Hub-and-Spoke (Recommended)</button>
+            <button class="tab-btn" onclick="openTab(event, 'sec3-central')">Centralized CoE</button>
+            <button class="tab-btn" onclick="openTab(event, 'sec3-federated')">Federated BU Model</button>
+          </div>
+
+          <div id="sec3-hybrid" class="tab-content active">
+            <div style="background: rgba(10, 14, 39, 0.6); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--cyan);">
+              <h3 style="color: var(--cyan); margin-bottom: 0.75rem;">Hub-and-Spoke AI Operating Blueprint</h3>
+              <p style="font-size: 0.92rem; margin-bottom: 1rem;">
+                Combines centralized enterprise MLOps platform standards, reusable data pipelines, and governance (the <strong>Hub</strong>) with embedded, cross-functional AI product pods in Merchandising, Supply Chain, and Store Ops (the <strong>Spokes</strong>).
+              </p>
+
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+                <div style="background: rgba(18,23,53,0.8); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-color);">
+                  <strong style="color: var(--cyan);">Enterprise Hub Mandate</strong>
+                  <ul style="font-size: 0.85rem; margin-top: 0.5rem; padding-left: 1.2rem;">
+                    <li>Data platform architecture &amp; LLMOps guardrails</li>
+                    <li>Vendor &amp; partner ecosystem management</li>
+                    <li>Enterprise AI talent recruiting &amp; upskilling academy</li>
+                    <li>AI Risk, Ethics &amp; Bias auditing standards</li>
+                  </ul>
+                </div>
+
+                <div style="background: rgba(18,23,53,0.8); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-color);">
+                  <strong style="color: var(--pink);">Business Spokes Mandate</strong>
+                  <ul style="font-size: 0.85rem; margin-top: 0.5rem; padding-left: 1.2rem;">
+                    <li>Use-case identification &amp; business case ownership</li>
+                    <li>Domain-specific feature engineering</li>
+                    <li>Store associate &amp; planner workflow integration</li>
+                    <li>P&amp;L impact realization &amp; feedback loops</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="sec3-central" class="tab-content">
+            <div style="background: rgba(10, 14, 39, 0.6); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
+              <h3 style="color: var(--purple); margin-bottom: 0.75rem;">Centralized CoE Structure</h3>
+              <p style="font-size: 0.9rem;">
+                All data scientists, MLOps engineers, and AI PMs report into a single corporate CDO/CIO organization. Effective for early-stage maturity (Level 1-2) to establish baseline standards, but frequently suffers from business disconnect and slow adoption in store operations.
+              </p>
+            </div>
+          </div>
+
+          <div id="sec3-federated" class="tab-content">
+            <div style="background: rgba(10, 14, 39, 0.6); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
+              <h3 style="color: var(--gold); margin-bottom: 0.75rem;">Fully Federated Model</h3>
+              <p style="font-size: 0.9rem;">
+                Individual business units (Supply Chain, Digital, Stores) hire their own AI teams independently. Promotes rapid domain innovation, but creates massive platform duplication, inconsistent data schemas, compliance exposure, and technical debt.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section IV: Workforce Design -->
+      <section id="section-4" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Section IV</span>
+          <h2 class="section-title">Workforce Design &amp; Talent Strategy</h2>
+          <p class="section-subtitle">Role taxonomy for retail AI, build/buy/borrow matrix, and tailored upskilling pathways by persona.</p>
+        </div>
+
+        <h3 style="color: var(--text-bright); margin-bottom: 1rem;">👥 Retail AI Role Taxonomy</h3>
+        <div class="custom-table-wrapper">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Emerging AI Role</th>
+                <th>Core Responsibilities</th>
+                <th>Key Skillset Required</th>
+                <th>Talent Source Strategy</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>AI Product Manager (Retail)</strong></td>
+                <td>Translates retail business problems into AI specs; owns use-case backlog &amp; ROI</td>
+                <td>Retail domain, Agile, AI feasibility assessment, SQL</td>
+                <td><span class="pill pill-green">Upskill Merch / Digital Leads</span></td>
+              </tr>
+              <tr>
+                <td><strong>Retail Domain Translator</strong></td>
+                <td>Bridges store planners / buyers and data science teams during model tuning</td>
+                <td>Category management, supply chain, basic ML concepts</td>
+                <td><span class="pill pill-green">Upskill Category Analysts</span></td>
+              </tr>
+              <tr>
+                <td><strong>MLOps / LLMOps Engineer</strong></td>
+                <td>Builds scalable model deployment pipelines, automated drift alerts, API infrastructure</td>
+                <td>Python, Kubernetes, Docker, MLflow, Databricks/Snowflake</td>
+                <td><span class="pill pill-cyan">Borrow (TCS SI Partner) / Buy</span></td>
+              </tr>
+              <tr>
+                <td><strong>Frontline AI Enablement Lead</strong></td>
+                <td>Ensures store associates &amp; district managers adopt AI mobile tools and copilots</td>
+                <td>Store operations, change management, training, UX feedback</td>
+                <td><span class="pill pill-purple">Internal Store Ops Managers</span></td>
+              </tr>
+              <tr>
+                <td><strong>Model Risk &amp; Responsible AI Officer</strong></td>
+                <td>Audits models for price discrimination, algorithmic bias, privacy compliance</td>
+                <td>Legal, compliance, ethical AI frameworks, statistics</td>
+                <td><span class="pill pill-gold">Buy / Corporate Legal</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section V: Organization Structure & RACI -->
+      <section id="section-5" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Section V</span>
+          <h2 class="section-title">Organization Structure &amp; RACI Framework</h2>
+          <p class="section-subtitle">Org blueprints across maturity stages and interactive RACI decision matrix for top 20 critical AI decisions.</p>
+        </div>
+
+        <h3 style="color: var(--text-bright); margin-bottom: 1rem;">⚡ Interactive Top 20 Critical AI Decision RACI Matrix</h3>
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Legend: <strong>R</strong> = Responsible, <strong>A</strong> = Accountable (Single Owner), <strong>C</strong> = Consulted, <strong>I</strong> = Informed.
+        </p>
+
+        <div class="custom-table-wrapper">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Decision Domain &amp; Critical Decision</th>
+                <th>CEO</th>
+                <th>COO</th>
+                <th>CFO</th>
+                <th>CIO / CDO</th>
+                <th>BU VP</th>
+                <th>AI CoE Lead</th>
+                <th>Legal/Risk</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>1. Approval of Enterprise AI Charter &amp; TOM</strong></td>
+                <td><span class="pill pill-pink">A</span></td>
+                <td>C</td>
+                <td>C</td>
+                <td>R</td>
+                <td>C</td>
+                <td>R</td>
+                <td>C</td>
+              </tr>
+              <tr>
+                <td><strong>2. Capital Allocation for AI Portfolio</strong></td>
+                <td>I</td>
+                <td>C</td>
+                <td><span class="pill pill-pink">A</span></td>
+                <td>R</td>
+                <td>C</td>
+                <td>R</td>
+                <td>I</td>
+              </tr>
+              <tr>
+                <td><strong>3. Selection of Hyperscaler &amp; Data Platform</strong></td>
+                <td>I</td>
+                <td>I</td>
+                <td>C</td>
+                <td><span class="pill pill-pink">A</span></td>
+                <td>I</td>
+                <td>R</td>
+                <td>C</td>
+              </tr>
+              <tr>
+                <td><strong>4. Responsible AI &amp; Privacy Policy Sign-off</strong></td>
+                <td>I</td>
+                <td>I</td>
+                <td>I</td>
+                <td>C</td>
+                <td>I</td>
+                <td>R</td>
+                <td><span class="pill pill-pink">A</span></td>
+              </tr>
+              <tr>
+                <td><strong>5. Prioritization of BU Use-Case Backlog</strong></td>
+                <td>I</td>
+                <td>C</td>
+                <td>I</td>
+                <td>I</td>
+                <td><span class="pill pill-pink">A</span></td>
+                <td>R</td>
+                <td>I</td>
+              </tr>
+              <tr>
+                <td><strong>6. Overriding Algorithmic Markdown Recommendations</strong></td>
+                <td>I</td>
+                <td>I</td>
+                <td>I</td>
+                <td>I</td>
+                <td><span class="pill pill-pink">A</span></td>
+                <td>C</td>
+                <td>I</td>
+              </tr>
+              <tr>
+                <td><strong>7. Model Deployment to Store Associate Mobile Devices</strong></td>
+                <td>I</td>
+                <td><span class="pill pill-pink">A</span></td>
+                <td>I</td>
+                <td>C</td>
+                <td>R</td>
+                <td>R</td>
+                <td>I</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section VI: Readiness & Maturity Assessment -->
+      <section id="section-6" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Section VI</span>
+          <h2 class="section-title">Readiness &amp; Maturity Assessment</h2>
+          <p class="section-subtitle">Interactive 40-question CXO diagnostic with real-time scoring, color-coded heatmap grid, and tailored strategy recommendations.</p>
+        </div>
+
+        <div class="assessment-container">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h3 style="color: var(--cyan); font-size: 1.2rem;">📝 Retail AI Maturity Diagnostic (40 Questions)</h3>
+            <div id="diagnostic-score-badge" style="background: rgba(0,217,255,0.2); color: var(--cyan); border: 1px solid var(--cyan); padding: 0.4rem 1rem; border-radius: 20px; font-weight: 800; font-size: 0.95rem;">
+              Score: 0 / 200 (Level 1: Ad-Hoc)
+            </div>
+          </div>
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Select the option that best reflects your current enterprise state across the 8 critical dimensions below.
+          </p>
+
+          <div class="assessment-progress-bar">
+            <div class="assessment-progress-fill" id="diagnostic-progress"></div>
+          </div>
+
+          <!-- Dynamic Heatmap Results Grid -->
+          <h4 style="color: var(--text-bright); margin-bottom: 0.75rem;">📊 Dynamic Maturity Heatmap Grid</h4>
+          <div class="heatmap-grid" id="heatmap-grid">
+            <div class="heatmap-cell" style="background: rgba(255, 0, 110, 0.2); color: var(--pink);">
+              <div class="dim-name">Strategy &amp; Vision</div>
+              <div class="dim-score" id="score-dim-1">1.0</div>
+            </div>
+            <div class="heatmap-cell" style="background: rgba(255, 0, 110, 0.2); color: var(--pink);">
+              <div class="dim-name">Data Foundation</div>
+              <div class="dim-score" id="score-dim-2">1.0</div>
+            </div>
+            <div class="heatmap-cell" style="background: rgba(255, 0, 110, 0.2); color: var(--pink);">
+              <div class="dim-name">MLOps &amp; Tech</div>
+              <div class="dim-score" id="score-dim-3">1.0</div>
+            </div>
+            <div class="heatmap-cell" style="background: rgba(255, 0, 110, 0.2); color: var(--pink);">
+              <div class="dim-name">Operating Model</div>
+              <div class="dim-score" id="score-dim-4">1.0</div>
+            </div>
+            <div class="heatmap-cell" style="background: rgba(255, 0, 110, 0.2); color: var(--pink);">
+              <div class="dim-name">Talent &amp; Culture</div>
+              <div class="dim-score" id="score-dim-5">1.0</div>
+            </div>
+            <div class="heatmap-cell" style="background: rgba(255, 0, 110, 0.2); color: var(--pink);">
+              <div class="dim-name">Responsible AI</div>
+              <div class="dim-score" id="score-dim-6">1.0</div>
+            </div>
+            <div class="heatmap-cell" style="background: rgba(255, 0, 110, 0.2); color: var(--pink);">
+              <div class="dim-name">Change &amp; Adoption</div>
+              <div class="dim-score" id="score-dim-7">1.0</div>
+            </div>
+            <div class="heatmap-cell" style="background: rgba(255, 0, 110, 0.2); color: var(--pink);">
+              <div class="dim-name">P&amp;L Value Linkage</div>
+              <div class="dim-score" id="score-dim-8">1.0</div>
+            </div>
+          </div>
+
+          <!-- Diagnostic Questions Accordions -->
+          <div id="questions-container">
+            <!-- Questions will be dynamically populated via JS -->
+          </div>
+
+          <div id="diagnostic-recommendations" style="margin-top: 1.5rem; background: rgba(0,217,255,0.08); border: 1px solid var(--cyan); padding: 1.25rem; border-radius: 12px; display: none;">
+            <h4 style="color: var(--cyan); margin-bottom: 0.5rem;">💡 Tailored TCS Action Recommendations</h4>
+            <p id="recommendation-text" style="font-size: 0.9rem; color: var(--text-main);"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section VII: Data, Tech & Architecture Blueprint -->
+      <section id="section-7" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Section VII</span>
+          <h2 class="section-title">Data, Tech &amp; Architecture Blueprint</h2>
+          <p class="section-subtitle">Unified Retail Data Lakehouse pattern, MLOps lifecycle, and interactive reference architecture diagram.</p>
+        </div>
+
+        <h3 style="color: var(--text-bright); margin-bottom: 1rem;">🏛️ Composable Retail AI Reference Architecture</h3>
+        <div style="background: rgba(10, 14, 39, 0.8); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem;">
+          <!-- SVG Reference Architecture Diagram -->
+          <svg width="100%" height="220" viewBox="0 0 900 220" style="max-width: 900px;">
+            <defs>
+              <marker id="arrow-cyan" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--cyan)"/>
+              </marker>
+              <marker id="arrow-purple" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--purple)"/>
+              </marker>
+              <marker id="arrow-pink" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pink)"/>
+              </marker>
+            </defs>
+            <!-- Layer 1: Data Sources -->
+            <rect x="20" y="20" width="160" height="180" rx="10" fill="rgba(18,23,53,0.9)" stroke="var(--cyan)" stroke-width="1.5"/>
+            <text x="100" y="45" fill="var(--cyan)" font-size="12" font-weight="700" text-anchor="middle">RETAIL DATA SOURCES</text>
+            <rect x="35" y="60" width="130" height="28" rx="5" fill="rgba(0,217,255,0.1)"/>
+            <text x="100" y="78" fill="#fff" font-size="10" text-anchor="middle">POS &amp; E-comm Orders</text>
+            <rect x="35" y="95" width="130" height="28" rx="5" fill="rgba(0,217,255,0.1)"/>
+            <text x="100" y="113" fill="#fff" font-size="10" text-anchor="middle">ERP / WMS Inventory</text>
+            <rect x="35" y="130" width="130" height="28" rx="5" fill="rgba(0,217,255,0.1)"/>
+            <text x="100" y="148" fill="#fff" font-size="10" text-anchor="middle">Customer CDP &amp; Loyalty</text>
+
+            <!-- Arrow 1 -->
+            <path d="M 180 110 L 220 110" stroke="var(--cyan)" stroke-width="2" marker-end="url(#arrow-cyan)"/>
+
+            <!-- Layer 2: Lakehouse -->
+            <rect x="220" y="20" width="200" height="180" rx="10" fill="rgba(18,23,53,0.9)" stroke="var(--purple)" stroke-width="1.5"/>
+            <text x="320" y="45" fill="var(--purple)" font-size="12" font-weight="700" text-anchor="middle">UNIFIED DATA LAKEHOUSE</text>
+            <rect x="235" y="60" width="170" height="35" rx="5" fill="rgba(184,0,230,0.15)"/>
+            <text x="320" y="82" fill="#fff" font-size="10" text-anchor="middle">Product-360 &amp; Catalog</text>
+            <rect x="235" y="105" width="170" height="35" rx="5" fill="rgba(184,0,230,0.15)"/>
+            <text x="320" y="127" fill="#fff" font-size="10" text-anchor="middle">Customer-360 &amp; Identity</text>
+            <rect x="235" y="150" width="170" height="35" rx="5" fill="rgba(184,0,230,0.15)"/>
+            <text x="320" y="172" fill="#fff" font-size="10" text-anchor="middle">Inventory &amp; Supply Stream</text>
+
+            <!-- Arrow 2 -->
+            <path d="M 420 110 L 460 110" stroke="var(--purple)" stroke-width="2" marker-end="url(#arrow-purple)"/>
+
+            <!-- Layer 3: MLOps & LLM Engines -->
+            <rect x="460" y="20" width="220" height="180" rx="10" fill="rgba(18,23,53,0.9)" stroke="var(--pink)" stroke-width="1.5"/>
+            <text x="570" y="45" fill="var(--pink)" font-size="12" font-weight="700" text-anchor="middle">RETAIL AI ENGINES &amp; MLOPS</text>
+            <rect x="475" y="60" width="190" height="35" rx="5" fill="rgba(255,0,110,0.15)"/>
+            <text x="570" y="82" fill="#fff" font-size="10" text-anchor="middle">Demand Forecasting Engine</text>
+            <rect x="475" y="105" width="190" height="35" rx="5" fill="rgba(255,0,110,0.15)"/>
+            <text x="570" y="127" fill="#fff" font-size="10" text-anchor="middle">Markdown &amp; Price Elasticity</text>
+            <rect x="475" y="150" width="190" height="35" rx="5" fill="rgba(255,0,110,0.15)"/>
+            <text x="570" y="172" fill="#fff" font-size="10" text-anchor="middle">GenAI Associate Copilot RAG</text>
+
+            <!-- Arrow 3 -->
+            <path d="M 680 110 L 720 110" stroke="var(--pink)" stroke-width="2" marker-end="url(#arrow-pink)"/>
+
+            <!-- Layer 4: Experience Channels -->
+            <rect x="720" y="20" width="160" height="180" rx="10" fill="rgba(18,23,53,0.9)" stroke="var(--gold)" stroke-width="1.5"/>
+            <text x="800" y="45" fill="var(--gold)" font-size="12" font-weight="700" text-anchor="middle">EXPERIENCE ENDPOINTS</text>
+            <rect x="735" y="60" width="130" height="28" rx="5" fill="rgba(255,215,0,0.1)"/>
+            <text x="800" y="78" fill="#fff" font-size="10" text-anchor="middle">Store Associate App</text>
+            <rect x="735" y="95" width="130" height="28" rx="5" fill="rgba(255,215,0,0.1)"/>
+            <text x="800" y="113" fill="#fff" font-size="10" text-anchor="middle">Mobile Web &amp; App</text>
+            <rect x="735" y="130" width="130" height="28" rx="5" fill="rgba(255,215,0,0.1)"/>
+            <text x="800" y="148" fill="#fff" font-size="10" text-anchor="middle">Control Tower Dashboard</text>
+          </svg>
+        </div>
+      </section>
+
+      <!-- Section VIII: AI Implementation Playbook -->
+      <section id="section-8" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Section VIII</span>
+          <h2 class="section-title">AI Implementation Playbook (3-Horizon Roadmap)</h2>
+          <p class="section-subtitle">Sequenced 36-month transformation roadmap from quick-win pilots to autonomous retail scale.</p>
+        </div>
+
+        <div class="timeline">
+          <div class="timeline-node">
+            <div class="timeline-content">
+              <span class="pill pill-cyan">Horizon 1: Months 0 - 6</span>
+              <h3 style="color: var(--cyan); margin: 0.5rem 0;">Foundational Quick Wins &amp; Proof of Concept</h3>
+              <ul style="font-size: 0.9rem; padding-left: 1.2rem;">
+                <li>Deploy Store Associate GenAI Copilot for policy &amp; product lookup (20 store pilot)</li>
+                <li>Establish unified Product-360 and Customer-360 data pipelines in Lakehouse</li>
+                <li>Implement Demand Sensing for top 50 high-turnover SKUs in fresh grocery</li>
+                <li>Stage-Gate Approval: Validate &gt;15% reduction in search time before funding H2</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="timeline-node">
+            <div class="timeline-content">
+              <span class="pill pill-purple">Horizon 2: Months 6 - 18</span>
+              <h3 style="color: var(--purple); margin: 0.5rem 0;">Core Enterprise Scaling &amp; Multi-Banner Rollout</h3>
+              <ul style="font-size: 0.9rem; padding-left: 1.2rem;">
+                <li>Scale Algorithmic Markdown Optimization across all regional banners</li>
+                <li>Integrate Computer Vision Shrink Detection at self-checkout registers</li>
+                <li>Roll out 1:1 Hyper-Personalized Offer Engine in mobile app</li>
+                <li>Establish automated MLOps CI/CD pipelines and model drift alert triggers</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="timeline-node">
+            <div class="timeline-content">
+              <span class="pill pill-pink">Horizon 3: Months 18 - 36</span>
+              <h3 style="color: var(--pink); margin: 0.5rem 0;">Autonomous Adaptive AI Retail Operations</h3>
+              <ul style="font-size: 0.9rem; padding-left: 1.2rem;">
+                <li>Fully autonomous store replenishment with self-healing supply chain rerouting</li>
+                <li>Real-time dynamic store pricing &amp; electronic shelf label (ESL) integration</li>
+                <li>Generative agentic shopping assistants taking end-to-end customer actions</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section IX: KPI & Value Realization Framework -->
+      <section id="section-9" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Section IX</span>
+          <h2 class="section-title">KPI &amp; Value Realization Framework</h2>
+          <p class="section-subtitle">Real-time KPI dashboard, value tree linking AI models to P&amp;L impact, and benefits realization tracking.</p>
+        </div>
+
+        <h3 style="color: var(--text-bright); margin-bottom: 1rem;">📈 Interactive Executive KPI Dashboard</h3>
+        <div class="stat-grid" style="margin-bottom: 2rem;">
+          <div class="stat-card">
+            <div class="stat-number">+240 bps</div>
+            <div class="stat-label">EBITDA Margin Improvement</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">-28.4%</div>
+            <div class="stat-label">Forecast Error (MAPE)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">-18.2%</div>
+            <div class="stat-label">Store Shrink Reduction</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">+3.8%</div>
+            <div class="stat-label">Same-Store Sales Lift</div>
+          </div>
+        </div>
+
+        <h3 style="color: var(--text-bright); margin-bottom: 1rem;">🌲 Retail AI Value Tree (P&amp;L Linkage)</h3>
+        <div class="custom-table-wrapper">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>P&amp;L Financial Line Item</th>
+                <th>Underlying Operating Lever</th>
+                <th>AI Model / Initiative</th>
+                <th>Target KPI Benchmark</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong style="color:var(--green)">Gross Revenue Lift</strong></td>
+                <td>Basket size &amp; conversion rate expansion</td>
+                <td>1:1 Hyper-Personalized Offer Engine</td>
+                <td>+3.0% to +5.5% conversion lift</td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--green)">Gross Margin Expansion</strong></td>
+                <td>Markdown depth reduction &amp; timing optimization</td>
+                <td>Algorithmic Markdown Optimization</td>
+                <td>+120 to +180 bps gross margin lift</td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--cyan)">COGS &amp; Working Capital</strong></td>
+                <td>Inventory holding reduction &amp; safety stock drop</td>
+                <td>Probabilistic Demand Sensing</td>
+                <td>15% - 22% reduction in safety stock</td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--pink)">Store SG&amp;A Expense</strong></td>
+                <td>Associate labor task efficiency &amp; phone lookup drop</td>
+                <td>Store Associate AI Mobile Copilot</td>
+                <td>1.5 - 2.2 store hours saved / associate / day</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section X: CXO Action Guides -->
+      <section id="section-10" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Section X</span>
+          <h2 class="section-title">CXO Action Guides (90-Day Plans)</h2>
+          <p class="section-subtitle">Role-specific 90-day execution blueprints and Board of Directors communication templates.</p>
+        </div>
+
+        <div class="tab-container">
+          <div class="tab-buttons">
+            <button class="tab-btn active" onclick="openTab(event, 'cxo-ceo')">CEO Action Guide</button>
+            <button class="tab-btn" onclick="openTab(event, 'cxo-coo')">COO Action Guide</button>
+            <button class="tab-btn" onclick="openTab(event, 'cxo-cfo')">CFO Action Guide</button>
+            <button class="tab-btn" onclick="openTab(event, 'cxo-cio')">CIO / CDO Guide</button>
+          </div>
+
+          <div id="cxo-ceo" class="tab-content active">
+            <div style="background: rgba(10, 14, 39, 0.6); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--cyan);">
+              <h3 style="color: var(--cyan); margin-bottom: 0.75rem;">👔 CEO 90-Day AI Mandate</h3>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                <div style="background: rgba(18,23,53,0.8); padding: 1rem; border-radius: 8px;">
+                  <strong style="color:var(--cyan)">Days 1 - 30: Alignment</strong>
+                  <p style="font-size: 0.85rem; margin-top: 0.4rem;">Charter AI Steering Committee; align executive team on 3 core enterprise AI priorities.</p>
+                </div>
+                <div style="background: rgba(18,23,53,0.8); padding: 1rem; border-radius: 8px;">
+                  <strong style="color:var(--pink)">Days 31 - 60: TOM Launch</strong>
+                  <p style="font-size: 0.85rem; margin-top: 0.4rem;">Approve Hub-and-Spoke CoE design and assign executive accountability per value pool.</p>
+                </div>
+                <div style="background: rgba(18,23,53,0.8); padding: 1rem; border-radius: 8px;">
+                  <strong style="color:var(--purple)">Days 61 - 90: Board Review</strong>
+                  <p style="font-size: 0.85rem; margin-top: 0.4rem;">Present 3-year AI transformation vision &amp; funding gate mechanism to Board of Directors.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="cxo-coo" class="tab-content">
+            <div style="background: rgba(10, 14, 39, 0.6); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--cyan);">
+              <h3 style="color: var(--cyan); margin-bottom: 0.75rem;">🛒 COO 90-Day Operations Blueprint</h3>
+              <p style="font-size: 0.9rem;">Focus on store associate productivity, shrink reduction vision AI pilots, and inventory replenishment accuracy across distribution centers.</p>
+            </div>
+          </div>
+
+          <div id="cxo-cfo" class="tab-content">
+            <div style="background: rgba(10, 14, 39, 0.6); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--cyan);">
+              <h3 style="color: var(--cyan); margin-bottom: 0.75rem;">💰 CFO 90-Day Financial Control Guide</h3>
+              <p style="font-size: 0.9rem;">Establish venture-style quarterly funding gates, P&amp;L attribution formulas for AI models, and cloud token/compute cost governance.</p>
+            </div>
+          </div>
+
+          <div id="cxo-cio" class="tab-content">
+            <div style="background: rgba(10, 14, 39, 0.6); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--cyan);">
+              <h3 style="color: var(--cyan); margin-bottom: 0.75rem;">💻 CIO / CDO 90-Day Tech Blueprint</h3>
+              <p style="font-size: 0.9rem;">Deploy Retail Lakehouse MVP, select hyperscaler MLOps stack, establish LLM security guardrails, and build Product-360 API feeds.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section XI: Reusable Assets & Risk Register -->
+      <section id="section-11" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Section XI</span>
+          <h2 class="section-title">Reusable Assets &amp; Risk Register</h2>
+          <p class="section-subtitle">Governance charters, RFP checklists, and interactive AI Risk-Control Mapping matrix.</p>
+        </div>
+
+        <h3 style="color: var(--text-bright); margin-bottom: 1rem;">🛡️ Interactive AI Risk-Control Matrix</h3>
+        <div class="custom-table-wrapper">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Risk Vector</th>
+                <th>Severity</th>
+                <th>Potential Operational Impact</th>
+                <th>Mandatory Mitigation Control</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Algorithmic Price Discrimination</strong></td>
+                <td><span class="pill pill-pink">Critical</span></td>
+                <td>Regulatory fines &amp; brand reputation damage</td>
+                <td>Hard pricing guardrail bounds &amp; human-in-the-loop review</td>
+              </tr>
+              <tr>
+                <td><strong>Model Drift in Fresh Replenishment</strong></td>
+                <td><span class="pill pill-pink">High</span></td>
+                <td>Over-stock spoilage or store out-of-stocks</td>
+                <td>Automated daily MAPE tracking &amp; retrain triggers</td>
+              </tr>
+              <tr>
+                <td><strong>Generative LLM Hallucination</strong></td>
+                <td><span class="pill pill-gold">Medium</span></td>
+                <td>Inaccurate store policy info given to associates</td>
+                <td>Vector DB RAG architecture constrained to approved docs</td>
+              </tr>
+              <tr>
+                <td><strong>Proprietary Data Leakage via Public APIs</strong></td>
+                <td><span class="pill pill-pink">Critical</span></td>
+                <td>IP loss &amp; competitor access to demand data</td>
+                <td>Private tenant LLM hosting &amp; enterprise API proxy filtering</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Practical Archetypes Deep Dives -->
+      <section id="archetype-grocery" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Archetype 1</span>
+          <h2 class="section-title">Fresh Grocery Chain Deep-Dive</h2>
+          <p class="section-subtitle">High-velocity SKU management, fresh waste reduction, and margin optimization.</p>
+        </div>
+        <p style="font-size: 0.92rem; color: var(--text-main);">
+          Grocery chains operate on razor-thin net margins (1.5% - 3.0%). The primary value pool lies in fresh produce spoilage reduction and automated shelf-life markdown algorithms.
+        </p>
+      </section>
+
+      <section id="archetype-fashion" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Archetype 2</span>
+          <h2 class="section-title">Fashion &amp; Apparel Deep-Dive</h2>
+          <p class="section-subtitle">Trend sensing, markdown timing optimization, and sizing fit engines.</p>
+        </div>
+        <p style="font-size: 0.92rem; color: var(--text-main);">
+          Fashion retailers suffer from high markdown rates (up to 30% volume sold below full price) and e-commerce return rates exceeding 30%. Generative visual trend sensing and size recommendation AI form the primary thesis.
+        </p>
+      </section>
+
+      <section id="archetype-specialty" class="glass-panel">
+        <div class="section-header">
+          <span class="section-tag">Archetype 3</span>
+          <h2 class="section-title">Specialty &amp; Big-Box Deep-Dive</h2>
+          <p class="section-subtitle">Frontline associate empowerment, clienteling, and shrink prevention.</p>
+        </div>
+        <p style="font-size: 0.92rem; color: var(--text-main);">
+          Big-box specialty stores feature large floor footprints and complex associate workflows. Generative AI mobile copilots and self-checkout computer vision provide rapid operational payback.
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Theme Toggle Script
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      
+      document.getElementById('theme-icon').textContent = next === 'dark' ? '🌙' : '☀️';
+      document.getElementById('theme-text').textContent = next === 'dark' ? 'Dark' : 'Light';
+    }
+
+    // Mobile Sidebar Toggle
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('mobile-open');
+    }
+
+    // Active Sidebar Link on Click & Scroll
+    function setActiveNav(element) {
+      document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+      
+      const breadcrumb = document.getElementById('current-breadcrumb');
+      if (breadcrumb) {
+        breadcrumb.textContent = element.textContent.trim();
+      }
+
+      // Close mobile sidebar if open
+      document.getElementById('sidebar').classList.remove('mobile-open');
+    }
+
+    // Tab Controller Script
+    function openTab(evt, tabId) {
+      const parent = evt.currentTarget.closest('.glass-panel, .tab-container');
+      parent.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+      parent.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+
+      document.getElementById(tabId).classList.add('active');
+      evt.currentTarget.classList.add('active');
+    }
+
+    // Bubble Chart Filtering
+    function filterBubbleChart(cat) {
+      const bubbles = document.querySelectorAll('.bubble-group');
+      bubbles.forEach(b => {
+        if (cat === 'all' || b.getAttribute('data-cat') === cat) {
+          b.style.display = '';
+          b.style.opacity = '1';
+        } else {
+          b.style.opacity = '0.15';
+        }
+      });
+    }
+
+    // Diagnostic Questionnaire Generator & Calculator
+    const questionsData = [
+      // Dimension 1: Strategy & Vision
+      { dim: 1, title: "1. Enterprise AI Vision Alignment", options: ["Ad-hoc projects without executive alignment", "Siloed departmental AI experiments", "Formal executive AI roadmap defined", "AI embedded in annual strategic planning", "Adaptive AI-first enterprise business model"] },
+      { dim: 1, title: "2. Value Pool Identification", options: ["No formal ROI estimation", "Qualitative benefits estimation only", "Top 5 use cases linked to EBITDA targets", "Comprehensive P&L value pool map", "Real-time dynamic value tracking"] },
+      { dim: 1, title: "3. Executive Sponsorship", options: ["No executive sponsor", "Siloed VP sponsor", "CDO/CIO sponsored initiative", "CEO & Steering Committee ownership", "Board-level AI governance committee"] },
+      { dim: 1, title: "4. Capital Allocation Mechanism", options: ["Ad-hoc project funding requests", "Annual static IT budget allocation", "Stage-gate quarterly funding mechanism", "Dedicated venture-style AI innovation fund", "Dynamic value-reinvestment model"] },
+      { dim: 1, title: "5. Competitive AI Benchmarking", options: ["Unaware of competitor AI posture", "Occasional competitive observation", "Formal annual AI benchmark audit", "Continuous competitive feature tracking", "Industry-defining AI benchmark leader"] },
+
+      // Dimension 2: Data Foundation
+      { dim: 2, title: "6. Customer-360 Single Source of Truth", options: ["Fragmented channel data silos", "Batch customer transaction exports", "Unified CDP with basic identity resolution", "Real-time Customer-360 operationalized", "Predictive real-time behavioral graph"] },
+      { dim: 2, title: "7. Product & Catalog Data Quality", options: ["Inconsistent supplier spreadsheets", "Centralized PIM with manual attributes", "Automated product taxonomy enrichment", "AI-enhanced Product-360 knowledge graph", "Autonomous real-time catalog syncing"] },
+      { dim: 2, title: "8. Inventory Visibility & Stream", options: ["Daily batch EOD inventory updates", "Sub-daily store inventory polling", "Near real-time perpetual inventory feed", "Unified real-time omnichannel inventory", "Predictive shelf-level inventory sensing"] },
+      { dim: 2, title: "9. Data Governance & Stewardship", options: ["No formal data ownership", "Departmental data stewards", "Enterprise Data Governance Council", "Automated data lineage & quality scoring", "Self-healing data quality pipelines"] },
+      { dim: 2, title: "10. Lakehouse Architecture", options: ["Legacy relational databases", "Disjointed data warehouses", "Modern Cloud Data Lakehouse MVP", "Enterprise Data Fabric operational", "Distributed real-time streaming mesh"] },
+
+      // Dimension 3: MLOps & Tech
+      { dim: 3, title: "11. Model Deployment Automation", options: ["Manual notebook model execution", "Scripted deployment to staging", "Automated MLOps CI/CD pipelines", "Multi-cloud deployment orchestration", "Autonomous model retrain & failover"] },
+      { dim: 3, title: "12. Model Drift Monitoring", options: ["No drift monitoring", "Occasional manual performance check", "Automated MAPE/loss metric alerts", "Real-time drift & concept shift monitoring", "Self-correcting model feedback loops"] },
+      { dim: 3, title: "13. Generative AI / LLM Guardrails", options: ["Unmonitored public LLM usage", "Basic API prompt guidelines", "Vector RAG with enterprise document bounds", "Private tenant LLM with latency SLAs", "Multi-agent LLM orchestration hub"] },
+      { dim: 3, title: "14. API & Headless Integration", options: ["Monolithic legacy batch interfaces", "Point-to-point REST APIs", "Headless microservices API gateway", "Event-driven asynchronous messaging", "Composable event-driven architecture"] },
+      { dim: 3, title: "15. Infrastructure Scalability", options: ["On-premise physical servers", "Static cloud VMs", "Auto-scaling cloud containers", "Serverless GPU compute pools", "Global edge-compute AI deployment"] },
+
+      // Dimension 4: Operating Model
+      { dim: 4, title: "16. Target Operating Model Structure", options: ["Unstructured project teams", "Centralized IT service desk", "Hybrid Hub-and-Spoke CoE operational", "Product-centric cross-functional pods", "Fully autonomous business AI teams"] },
+      { dim: 4, title: "17. Business-IT Collaboration", options: ["Siloed handover requests", "Ad-hoc project alignment", "Joint Agile sprint planning", "Embedded domain translators in pods", "Seamless co-leading product teams"] },
+      { dim: 4, title: "18. AI CoE Mandate & Charter", options: ["No CoE charter", "Informal advisory group", "Approved CoE charter with decision rights", "CoE managing enterprise AI portfolio", "CoE driving industry co-innovation"] },
+      { dim: 4, title: "19. Vendor & Partner Management", options: ["Ad-hoc vendor purchasing", "Standard IT procurement", "Strategic SI partner co-innovation model", "Ecosystem API integration framework", "Preferred strategic partner alliance"] },
+      { dim: 4, title: "20. Product Backlog Governance", options: ["Informal request email queue", "IT-prioritized feature backlog", "Value-pool-weighted prioritization", "Continuous quarterly stage-gate review", "Dynamic market-responsive backlog"] },
+
+      // Dimension 5: Talent & Culture
+      { dim: 5, title: "21. AI PM & Translator Availability", options: ["No AI PM roles exist", "Part-time IT analysts", "Dedicated AI PMs assigned to core pods", "Certified domain translators in each BU", "Flourishing AI product academy"] },
+      { dim: 5, title: "22. Executive AI Literacy", options: ["Limited AI understanding", "Basic awareness of GenAI tools", "Formal CXO AI executive briefing", "All VPs trained in AI feasibility", "AI fluency driving board strategy"] },
+      { dim: 5, title: "23. Frontline Store Associate Enablement", options: ["No AI tools in stores", "Paper training manuals", "Interactive mobile copilot pilots", "Standardized mobile associate AI workflow", "AI-empowered autonomous store team"] },
+      { dim: 5, title: "24. Data Science & Engineering Talent", options: ["Severe talent shortage", "Heavily reliant on contractors", "Core internal team + SI partner augmentation", "Top-tier internal AI talent pool", "Industry-recognized AI center of talent"] },
+      { dim: 5, title: "25. Culture of Experimentation", options: ["Risk-averse / failure punishment", "Cautious pilot approval", "Structured fail-fast pilot culture", "Widespread A/B testing mindset", "Continuous innovation engine"] },
+
+      // Dimension 6: Responsible AI & Risk
+      { dim: 6, title: "26. Algorithmic Bias Auditing", options: ["No bias auditing", "Ad-hoc post-incident investigation", "Pre-deployment model fairness audit", "Automated bias detection dashboard", "Continuous ethical AI auditing"] },
+      { dim: 6, title: "27. IP & Data Privacy Protection", options: ["Unregulated data exposure", "Standard NDA agreements", "Private tenant cloud environment", "Zero-trust privacy architecture", "Differential privacy & encryption"] },
+      { dim: 6, title: "28. Regulatory Compliance Readiness", options: ["Reactive to legal notices", "Basic GDPR/CCPA compliance", "Formal AI Risk Register established", "Proactive state/federal AI policy mapping", "Global leader in compliance standards"] },
+      { dim: 6, title: "29. Human-in-the-Loop Safeguards", options: ["Unchecked automated decisions", "Manual spot-checking", "Mandatory human sign-off on pricing", "Risk-scored human escalation", "Autonomous execution with audit logs"] },
+      { dim: 6, title: "30. Security & Threat Monitoring", options: ["Standard IT firewall only", "Basic API key security", "LLM prompt injection defense", "Real-time AI threat monitoring", "Zero-trust model security posture"] },
+
+      // Dimension 7: Change Management
+      { dim: 7, title: "31. Change Communication Strategy", options: ["No change messaging", "One-off email announcements", "Structured town halls & newsletters", "Persona-based change enablement plan", "Inspirational transformation movement"] },
+      { dim: 7, title: "32. Store Associate Adoption Rate", options: ["<10% tool usage", "10-30% hesitant adoption", "50-70% regular store usage", ">80% store associate adoption", "100% daily reliance on AI copilot"] },
+      { dim: 7, title: "33. Incentives & KPI Alignment", options: ["Traditional sales targets only", "Individual pilot bonuses", "Store manager AI adoption incentives", "P&L targets linked to AI models", "Enterprise-wide AI value bonuses"] },
+      { dim: 7, title: "34. Feedback Loop Mechanism", options: ["No feedback channels", "Ad-hoc support tickets", "In-app associate feedback buttons", "Weekly user feedback review meetings", "Real-time adaptive UX updates"] },
+      { dim: 7, title: "35. Leadership Change Cadence", options: ["Rare executive check-ins", "Monthly project status updates", "Bi-weekly AI Steering Committee", "Weekly operational dashboard review", "Continuous real-time steering"] },
+
+      // Dimension 8: P&L Value Linkage
+      { dim: 8, title: "36. P&L Impact Attribution", options: ["No financial tracking", "Estimated gross savings", "CFO-validated P&L line-item mapping", "Real-time model attribution model", "Audited P&L value realization"] },
+      { dim: 8, title: "37. Hard vs. Soft Benefit Rigor", options: ["Soft benefits only claimed", "Mix of soft/hard without proof", "Strict hard dollar cost saving focus", "Balanced scorecard with hard EBITDA", "Audited hard cash realization"] },
+      { dim: 8, title: "38. Baseline & Target Tracking", options: ["No baseline established", "Historical year-ago comparison", "Controlled A/B store test baselines", "Synthetic control store modeling", "Dynamic predictive baselining"] },
+      { dim: 8, title: "39. Course-Correction Triggers", options: ["No failure triggers", "Annual project cancellation review", "Quarterly stage-gate kill triggers", "Automated model shutdown alerts", "Real-time self-correcting strategy"] },
+      { dim: 8, title: "40. Post-Implementation Auditing", options: ["No post-launch audits", "One-time 6-month review", "Annual value realization audit", "Quarterly CFO value verification", "Continuous automated value auditing"] }
+    ];
+
+    let userScores = new Array(40).fill(0); // 0 means unselected initially
+
+    function renderQuestions() {
+      const container = document.getElementById('questions-container');
+      container.innerHTML = '';
+
+      questionsData.forEach((q, idx) => {
+        const qCard = document.createElement('div');
+        qCard.className = 'question-card';
+        
+        let optionsHtml = '';
+        q.options.forEach((opt, optIdx) => {
+          const val = optIdx + 1;
+          optionsHtml += `
+            <button class="option-btn ${userScores[idx] === val ? 'selected' : ''}" onclick="selectOption(${idx}, ${val}, ${q.dim})">
+              L${val}: ${opt}
+            </button>
+          `;
+        });
+
+        qCard.innerHTML = `
+          <div class="question-title">${q.title}</div>
+          <div class="options-grid">${optionsHtml}</div>
+        `;
+        container.appendChild(qCard);
+      });
+
+      calculateScores();
+    }
+
+    function selectOption(qIdx, val, dim) {
+      userScores[qIdx] = val;
+      const qCards = document.querySelectorAll('.question-card');
+      if (qCards[qIdx]) {
+        const btns = qCards[qIdx].querySelectorAll('.option-btn');
+        btns.forEach((btn, btnIdx) => {
+          if (btnIdx + 1 === val) {
+            btn.classList.add('selected');
+          } else {
+            btn.classList.remove('selected');
+          }
+        });
+      }
+      calculateScores();
+    }
+
+    function calculateScores() {
+      let dimTotals = new Array(9).fill(0);
+      let dimCounts = new Array(9).fill(0);
+
+      questionsData.forEach((q, idx) => {
+        if (userScores[idx] > 0) {
+          dimTotals[q.dim] += userScores[idx];
+          dimCounts[q.dim] += 1;
+        }
+      });
+
+      let totalScore = userScores.reduce((a, b) => a + b, 0); // Out of 200
+      const answeredCount = userScores.filter(s => s > 0).length;
+      let totalAvg = answeredCount > 0 ? (totalScore / answeredCount).toFixed(1) : "0.0";
+
+      // Update progress bar
+      document.getElementById('diagnostic-progress').style.width = (answeredCount / 40 * 100) + '%';
+
+      // Update badge score
+      let levelTitle = "Level 1: Ad-Hoc";
+      if (totalAvg >= 4.5) levelTitle = "Level 5: Adaptive AI-Native";
+      else if (totalAvg >= 3.8) levelTitle = "Level 4: Integrated Enterprise";
+      else if (totalAvg >= 2.8) levelTitle = "Level 3: Scaling Structured";
+      else if (totalAvg >= 1.8) levelTitle = "Level 2: Emerging Siloed";
+
+      document.getElementById('diagnostic-score-badge').textContent = `Score: ${totalScore} / 200 (${answeredCount}/40 answered - ${levelTitle})`;
+
+      // Update Heatmap
+      for (let d = 1; d <= 8; d++) {
+        let avg = dimCounts[d] > 0 ? (dimTotals[d] / dimCounts[d]).toFixed(1) : "0.0";
+        const cell = document.getElementById(`score-dim-${d}`);
+        if (cell) {
+          cell.textContent = avg;
+          const parentCell = cell.parentElement;
+          if (avg >= 4.0) {
+            parentCell.style.background = 'rgba(0, 245, 212, 0.25)';
+            parentCell.style.color = 'var(--green)';
+          } else if (avg >= 3.0) {
+            parentCell.style.background = 'rgba(0, 217, 255, 0.25)';
+            parentCell.style.color = 'var(--cyan)';
+          } else if (avg >= 2.0) {
+            parentCell.style.background = 'rgba(255, 215, 0, 0.25)';
+            parentCell.style.color = 'var(--gold)';
+          } else {
+            parentCell.style.background = 'rgba(255, 0, 110, 0.25)';
+            parentCell.style.color = 'var(--pink)';
+          }
+        }
+      }
+
+      // Recommendations
+      const recBox = document.getElementById('diagnostic-recommendations');
+      const recText = document.getElementById('recommendation-text');
+      
+      if (answeredCount > 0) {
+        recBox.style.display = 'block';
+        if (totalAvg < 2.0) {
+          recText.textContent = "Your organization is at Level 1 (Ad-Hoc). TCS recommends focusing immediately on Section III (TOM Blueprint) to form an AI Steering Committee, and Section VII to establish a unified Product-360 data foundation before attempting to scale use cases.";
+        } else if (totalAvg < 3.5) {
+          recText.textContent = "Your organization is at Level 2/3 (Emerging/Scaling). Priorities should center on Section IV (Workforce Upskilling) and Section VIII (MLOps CI/CD Automation) to eliminate pilot bottlenecks and accelerate transition from Horizon 1 to Horizon 2.";
+        } else {
+          recText.textContent = "Your organization is at Level 4/5 (Integrated/Adaptive). Excellent maturity posture! Focus on Section VIII Horizon 3 (Autonomous Retail Operations) and Section XI Risk Controls to ensure continuous ethical AI compliance.";
+        }
+      } else {
+        recBox.style.display = 'none';
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // Global Search Function
+    function handleSearch(query) {
+      const resultsContainer = document.getElementById('search-results');
+      if (!query || query.trim().length < 2) {
+        resultsContainer.classList.remove('active');
+        return;
+      }
+
+      const q = query.toLowerCase();
+      const textNodes = document.querySelectorAll('.glass-panel h1, .glass-panel h2, .glass-panel h3, .glass-panel h4, .glass-panel p, .glass-panel td');
+      
+      let matches = [];
+      textNodes.forEach(node => {
+        const text = node.textContent;
+        const matchIdx = text.toLowerCase().indexOf(q);
+        if (matchIdx !== -1) {
+          const parentPanel = node.closest('.glass-panel');
+          const panelTitle = parentPanel ? parentPanel.querySelector('.section-title, .hero-title')?.textContent : "Playbook Section";
+          const panelId = parentPanel ? parentPanel.id : "";
+
+          const start = Math.max(0, matchIdx - 25);
+          const end = Math.min(text.length, matchIdx + 65);
+          const snippetText = (start > 0 ? '...' : '') + text.substring(start, end) + (end < text.length ? '...' : '');
+
+          matches.push({
+            title: panelTitle || "Topic Match",
+            snippet: snippetText,
+            id: panelId
+          });
+        }
+      });
+
+      if (matches.length > 0) {
+        resultsContainer.innerHTML = matches.slice(0, 6).map(m => `
+          <div class="search-result-item" onclick="scrollToSection('${escapeHtml(m.id)}')">
+            <div class="search-result-title">${escapeHtml(m.title)}</div>
+            <div class="search-result-snippet">${escapeHtml(m.snippet)}</div>
+          </div>
+        `).join('');
+        resultsContainer.classList.add('active');
+      } else {
+        resultsContainer.innerHTML = '<div class="search-result-item"><div class="search-result-snippet">No matching playbook topics found.</div></div>';
+        resultsContainer.classList.add('active');
+      }
+    }
+
+    function scrollToSection(id) {
+      document.getElementById('search-results').classList.remove('active');
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    // Initialize diagnostic on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      renderQuestions();
+    });
+  </script>
+</body>
+</html>
