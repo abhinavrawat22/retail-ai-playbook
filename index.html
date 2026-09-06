@@ -2255,7 +2255,18 @@
 
     function selectOption(qIdx, val, dim) {
       userScores[qIdx] = val;
-      renderQuestions();
+      const qCards = document.querySelectorAll('.question-card');
+      if (qCards[qIdx]) {
+        const btns = qCards[qIdx].querySelectorAll('.option-btn');
+        btns.forEach((btn, btnIdx) => {
+          if (btnIdx + 1 === val) {
+            btn.classList.add('selected');
+          } else {
+            btn.classList.remove('selected');
+          }
+        });
+      }
+      calculateScores();
     }
 
     function calculateScores() {
@@ -2326,6 +2337,11 @@
       }
     }
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     // Global Search Function
     function handleSearch(query) {
       const resultsContainer = document.getElementById('search-results');
@@ -2355,9 +2371,9 @@
 
       if (matches.length > 0) {
         resultsContainer.innerHTML = matches.slice(0, 6).map(m => `
-          <div class="search-result-item" onclick="scrollToSection('${m.id}')">
-            <div class="search-result-title">${m.title}</div>
-            <div class="search-result-snippet">${m.snippet}</div>
+          <div class="search-result-item" onclick="scrollToSection('${escapeHtml(m.id)}')">
+            <div class="search-result-title">${escapeHtml(m.title)}</div>
+            <div class="search-result-snippet">${escapeHtml(m.snippet)}</div>
           </div>
         `).join('');
         resultsContainer.classList.add('active');
