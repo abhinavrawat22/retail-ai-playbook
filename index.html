@@ -2156,7 +2156,7 @@
       const bubbles = document.querySelectorAll('.bubble-group');
       bubbles.forEach(b => {
         if (cat === 'all' || b.getAttribute('data-cat') === cat) {
-          b.style.display = 'block';
+          b.style.display = '';
           b.style.opacity = '1';
         } else {
           b.style.opacity = '0.15';
@@ -2311,14 +2311,18 @@
       // Recommendations
       const recBox = document.getElementById('diagnostic-recommendations');
       const recText = document.getElementById('recommendation-text');
-      recBox.style.display = 'block';
-
-      if (totalAvg < 2.0) {
-        recText.textContent = "Your organization is at Level 1 (Ad-Hoc). TCS recommends focusing immediately on Section III (TOM Blueprint) to form an AI Steering Committee, and Section VII to establish a unified Product-360 data foundation before attempting to scale use cases.";
-      } else if (totalAvg < 3.5) {
-        recText.textContent = "Your organization is at Level 2/3 (Emerging/Scaling). Priorities should center on Section IV (Workforce Upskilling) and Section VIII (MLOps CI/CD Automation) to eliminate pilot bottlenecks and accelerate transition from Horizon 1 to Horizon 2.";
+      
+      if (answeredCount > 0) {
+        recBox.style.display = 'block';
+        if (totalAvg < 2.0) {
+          recText.textContent = "Your organization is at Level 1 (Ad-Hoc). TCS recommends focusing immediately on Section III (TOM Blueprint) to form an AI Steering Committee, and Section VII to establish a unified Product-360 data foundation before attempting to scale use cases.";
+        } else if (totalAvg < 3.5) {
+          recText.textContent = "Your organization is at Level 2/3 (Emerging/Scaling). Priorities should center on Section IV (Workforce Upskilling) and Section VIII (MLOps CI/CD Automation) to eliminate pilot bottlenecks and accelerate transition from Horizon 1 to Horizon 2.";
+        } else {
+          recText.textContent = "Your organization is at Level 4/5 (Integrated/Adaptive). Excellent maturity posture! Focus on Section VIII Horizon 3 (Autonomous Retail Operations) and Section XI Risk Controls to ensure continuous ethical AI compliance.";
+        }
       } else {
-        recText.textContent = "Your organization is at Level 4/5 (Integrated/Adaptive). Excellent maturity posture! Focus on Section VIII Horizon 3 (Autonomous Retail Operations) and Section XI Risk Controls to ensure continuous ethical AI compliance.";
+        recBox.style.display = 'none';
       }
     }
 
