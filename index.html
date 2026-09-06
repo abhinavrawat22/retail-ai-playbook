@@ -1784,6 +1784,11 @@
         <div style="background: rgba(10, 14, 39, 0.8); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem;">
           <!-- SVG Reference Architecture Diagram -->
           <svg width="100%" height="220" viewBox="0 0 900 220" style="max-width: 900px;">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--cyan)"/>
+              </marker>
+            </defs>
             <!-- Layer 1: Data Sources -->
             <rect x="20" y="20" width="160" height="180" rx="10" fill="rgba(18,23,53,0.9)" stroke="var(--cyan)" stroke-width="1.5"/>
             <text x="100" y="45" fill="var(--cyan)" font-size="12" font-weight="700" text-anchor="middle">RETAIL DATA SOURCES</text>
@@ -2191,7 +2196,7 @@
       { dim: 5, title: "25. Culture of Experimentation", options: ["Risk-averse / failure punishment", "Cautious pilot approval", "Structured fail-fast pilot culture", "Widespread A/B testing mindset", "Continuous innovation engine"] },
 
       // Dimension 6: Responsible AI & Risk
-      { dim: 26, title: "26. Algorithmic Bias Auditing", options: ["No bias auditing", "Ad-hoc post-incident investigation", "Pre-deployment model fairness audit", "Automated bias detection dashboard", "Continuous ethical AI auditing"] },
+      { dim: 6, title: "26. Algorithmic Bias Auditing", options: ["No bias auditing", "Ad-hoc post-incident investigation", "Pre-deployment model fairness audit", "Automated bias detection dashboard", "Continuous ethical AI auditing"] },
       { dim: 6, title: "27. IP & Data Privacy Protection", options: ["Unregulated data exposure", "Standard NDA agreements", "Private tenant cloud environment", "Zero-trust privacy architecture", "Differential privacy & encryption"] },
       { dim: 6, title: "28. Regulatory Compliance Readiness", options: ["Reactive to legal notices", "Basic GDPR/CCPA compliance", "Formal AI Risk Register established", "Proactive state/federal AI policy mapping", "Global leader in compliance standards"] },
       { dim: 6, title: "29. Human-in-the-Loop Safeguards", options: ["Unchecked automated decisions", "Manual spot-checking", "Mandatory human sign-off on pricing", "Risk-scored human escalation", "Autonomous execution with audit logs"] },
