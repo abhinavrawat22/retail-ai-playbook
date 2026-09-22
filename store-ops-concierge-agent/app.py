@@ -32,6 +32,10 @@ if "last_guard_events" not in st.session_state:
     st.session_state.last_guard_events = []
 if "last_totals" not in st.session_state:
     st.session_state.last_totals = {}
+if "last_workflow_steps" not in st.session_state:
+    st.session_state.last_workflow_steps = []
+if "last_tool_calls" not in st.session_state:
+    st.session_state.last_tool_calls = []
 
 # --- Sidebar: setup ----------------------------------------------------------
 with st.sidebar:
@@ -49,11 +53,20 @@ with st.sidebar:
 
     st.divider()
     st.title("🛡️ Guardrail Events (last turn)")
-    if st.session_state.last_guard_events:
-        for evt in st.session_state.last_guard_events:
-            st.warning(evt)
+    fired = [e for e in st.session_state.last_guard_events if e.fired]
+    if fired:
+        for e in fired:
+            st.warning(f"**{e.guardrail}** fired\n\n{e.reason}")
     else:
-        st.caption("No guardrail actions triggered yet.")
+        st.caption("No guardrail fired on the last turn.")
+    with st.expander("Show all guardrail checks (fired and not fired)"):
+        if st.session_state.last_guard_events:
+            for e in st.session_state.last_guard_events:
+                icon = "🔴" if e.fired else "🟢"
+                st.text(f"{icon} {e.guardrail} [{e.stage}]")
+                st.caption(e.reason)
+        else:
+            st.caption("No guardrail checks recorded yet.")
 
     st.divider()
     st.title("📊 Observability (last turn)")
@@ -121,4 +134,33 @@ if user_input:
             st.session_state.last_trace = result["trace_events"]
             st.session_state.last_guard_events = result["guard_events"]
             st.session_state.last_totals = result["totals"]
+            st.session_state.last_workflow_steps = result["workflow_steps"]
+            st.session_state.last_tool_calls = result["tool_calls"]
         st.rerun()
+
+# --- Bottom of page: tool-call attribution ----------------------------------
+st.divider()
+st.subheader("🧰 Tool Calls by Agent (last turn)")
+if st.session_state.last_tool_calls:
+    for tc in st.session_state.last_tool_calls:
+        st.markdown(f"- **Agent:** `{tc['agent_name']}` -> **Tool:** `{tc['tool_name']}`")
+        st.caption(tc["detail"])
+else:
+    st.caption("No tool calls were made on the last turn (or no turn has run yet).")
+
+# --- Bottom of page: workflow explanation -----------------------------------
+st.subheader("🔄 How This Query Was Processed")
+if st.session_state.last_workflow_steps:
+    for step in st.session_state.last_workflow_steps:
+        st.markdown(step)
+else:
+    st.caption(
+        "Once you ask a question, this section will explain step by step how it moved "
+        "through the rate limiter, input guardrails, the agent's tool-calling loop, and "
+        "the output guardrails before you saw the answer."
+    )
+
+st.caption(
+    "Audit trail (every guardrail decision, tool call, and response) is appended to "
+    "`logs/audit.log`; per-turn performance metrics are appended to `logs/metrics.log`."
+)

@@ -33,11 +33,11 @@ calls them, and synthesizes a final answer — this is the core "agent" pattern
 
 ```mermaid
 flowchart TD
-    U["User (Streamlit chat)"] --> IG["Input Guardrail\n(prompt-injection check, PII redaction)"]
-    IG -- blocked --> U
-    IG -- allowed --> RL["Rate Limiter\n(10 req / 60s per session)"]
+    U["User (Streamlit chat)"] --> RL["Rate Limiter\n(10 req / 60s per session)"]
     RL -- limit hit --> U
-    RL -- ok --> AG["Agent Executor\n(LLM + tool-calling loop)"]
+    RL -- ok --> IG["Input Guardrails\n(prompt-injection check, PII redaction)"]
+    IG -- blocked --> U
+    IG -- allowed --> AG["Agent Executor\n(LLM + tool-calling loop)"]
     AG --> T1["check_inventory"]
     AG --> T2["get_order_status"]
     AG --> T3["calculate_discount"]
@@ -46,9 +46,11 @@ flowchart TD
     T2 --> AG
     T3 --> AG
     T4 --> AG
-    AG --> OG["Output Guardrail\n(PII redaction on final answer)"]
+    AG --> OG["Output Guardrails\n(PII redaction on final answer)"]
     OG --> OBS["Observability Layer\n(latency, tokens, cost, trace log)"]
+    OG --> AUDIT["Audit + Metrics Logs\n(logs/audit.log, logs/metrics.log)"]
     OBS --> U
+    AUDIT --> U
 ```
 
 **Data flow, step by step:**
@@ -75,9 +77,23 @@ flowchart TD
    record) before it's shown to the user.
 7. **Observability** (`observability.ObservabilityHandler`) is a LangChain
    callback handler attached to the executor invocation. It records every
-   LLM call and tool call with latency, an approximate token count, and an
-   illustrative cost estimate, plus every guardrail action. This is
-   rendered live in the Streamlit sidebar as a trace log.
+   LLM call and tool call with latency, an approximate token count, an
+   illustrative cost estimate, and **which agent made which tool call**
+   (`tool_call_summaries()`), plus every guardrail action. This is rendered
+   live in the Streamlit sidebar as a trace log.
+8. **Audit + metrics logging** (`audit.py`) writes two JSON-lines log files
+   under `logs/`: `audit.log` records every notable activity (query
+   received, each guardrail decision with its fired/not-fired reason, each
+   tool call, the final response) for a full "who did what, when, why"
+   trail; `metrics.log` records one aggregated performance record per turn
+   (latency, tokens, cost, tool-call count, which guardrails fired) for
+   ops/SRE-style monitoring.
+9. **Workflow explanation**: `agent.run_agent()` also builds a
+   `workflow_steps` list narrating, in plain English, exactly how that turn
+   moved through the pipeline (rate limiter → input guardrails → agent/tool
+   loop → output guardrails → response). The Streamlit UI renders this at
+   the bottom of the page after every query, alongside a "Tool Calls by
+   Agent" section listing each tool call and which agent triggered it.
 
 ---
 
@@ -88,9 +104,12 @@ store-ops-concierge-agent/
 ├── data.py            # In-memory inventory/orders/customers/policy "database"
 ├── tools.py            # The 4 LangChain @tool functions the agent can call
 ├── guardrails.py       # Input/output guardrails + PII redaction + rate limiter
-├── observability.py    # LangChain callback handler: trace events, latency, cost
+│                        # (each check returns a structured GuardrailEvent: name, fired, reason)
+├── observability.py    # LangChain callback handler: trace events, latency, cost, agent/tool attribution
+├── audit.py             # Audit log (logs/audit.log) + metrics log (logs/metrics.log), JSON-lines
 ├── agent.py            # System prompt + agent/executor wiring + run_agent() entrypoint
-├── app.py              # Streamlit UI (chat + sidebar: guardrails/observability/trace)
+│                        # (also builds the human-readable workflow_steps trace)
+├── app.py              # Streamlit UI (chat + sidebar + bottom-of-page tool/workflow sections)
 ├── requirements.txt
 ├── .env.example         # Copy to .env and add your OPENAI_API_KEY
 ├── README.md            # This file (architecture/flow/code)
@@ -117,6 +136,16 @@ store-ops-concierge-agent/
   for LangSmith or an OpenTelemetry exporter with no changes to `agent.py`.
 - **max_iterations on the executor** prevents an agent from looping
   indefinitely between tool calls — an important safety/cost control.
+- **Guardrail decisions are structured, not just strings**: every guardrail
+  check returns a `GuardrailEvent(guardrail, fired, reason, stage)`, so the
+  UI, audit log, and workflow narration can all show *which* guardrail acted
+  and *why*, instead of an opaque "blocked" flag.
+- **Audit trail is separate from performance metrics**: `audit.log` answers
+  compliance questions ("what happened, and why"); `metrics.log` answers
+  operational questions ("how fast/expensive was this, and how often do
+  guardrails fire"). Keeping them as separate files/streams mirrors how
+  production systems typically split security/audit logging from SRE
+  dashboards.
 
 ---
 
@@ -130,6 +159,35 @@ widely documented "agent + tools" teaching pattern. If you want to teach the
 newer LangGraph-based API instead, swap `agent.py`'s executor construction for
 `langchain.agents.create_agent(model=..., tools=..., middleware=[...])` — the
 `tools.py`, `guardrails.py`, and `data.py` modules stay unchanged either way.
+
+## 3b. Audit log, metrics log, and the on-page workflow explanation
+
+Every turn writes to two files under `store-ops-concierge-agent/logs/`
+(created automatically, gitignored):
+
+- **`logs/audit.log`** — one JSON line per activity: `user_query_received`,
+  `guardrail_decision` (with `guardrail`, `fired`, `reason`, `stage`),
+  `tool_call` (with `agent_name`, `tool_name`, `detail`), and
+  `agent_response`. This is the full "who did what, when, and why" trail.
+- **`logs/metrics.log`** — one JSON line per completed turn with `latency_ms`,
+  `tokens_in`/`tokens_out`, `cost_usd`, `tool_call_count`, the list of tools
+  called, and the list of guardrails that fired. This is the aggregated
+  performance/ops view.
+
+In the Streamlit UI, after every query the bottom of the page shows:
+
+- **🧰 Tool Calls by Agent** — for each tool call made that turn, which agent
+  made it (`Store Ops Concierge`) and which tool (`check_inventory`,
+  `get_order_status`, etc.), with the input/output.
+- **🔄 How This Query Was Processed** — a numbered, plain-English narration
+  of the pipeline for that specific turn (e.g. "1. Rate limiter checked...",
+  "2. Input guardrails evaluated: FIRED -> Prompt Injection Guard.", "3. Store
+  Ops Concierge reasoned about the request and called: check_inventory...",
+  etc.), generated from the same data written to the logs above.
+
+The sidebar's guardrail panel also now shows, per guardrail, whether it
+**fired** and the specific **reason** (e.g. which regex matched, or which PII
+types were found) rather than just a blocked/allowed flag.
 
 ## 4. Extending this lab
 

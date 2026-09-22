@@ -93,13 +93,40 @@ Try these one at a time and watch the sidebar trace log show which tool fired:
 
 ## 7. Reading the sidebar
 
-- **Guardrail Events**: any block/redaction that happened on the last turn.
+- **Guardrail Events**: guardrails that **fired** on the last turn are shown
+  as warnings with the exact reason (e.g. which phrase matched, which PII
+  type was found). Expand "Show all guardrail checks" to see every guardrail
+  that ran, including the ones that did *not* fire.
 - **Observability**: latency, tool-call count, approximate tokens in/out, and
   an illustrative cost estimate (not real billing — see `observability.py`).
 - **Trace Log**: chronological list of every LLM call and tool call for the
   last turn, with inputs/outputs truncated for readability.
 
-## 8. Troubleshooting
+At the **bottom of the page**, after each answer, you'll also see:
+
+- **🧰 Tool Calls by Agent**: exactly which agent invoked which tool this turn.
+- **🔄 How This Query Was Processed**: a plain-English, numbered walkthrough
+  of that turn's pipeline (rate limiter → input guardrails → agent/tool loop
+  → output guardrails → response).
+
+## 8. Audit and metrics logs
+
+Every turn is also written to two log files under `store-ops-concierge-agent/logs/`
+(created automatically on first run; not committed to git):
+
+- `logs/audit.log` — one JSON line per activity (query received, each
+  guardrail decision with its reason, each tool call, the final response).
+- `logs/metrics.log` — one JSON line per completed turn with latency, token
+  counts, estimated cost, tool-call count, and which guardrails fired.
+
+Try running a few prompts (including an adversarial one) and then inspect
+the logs:
+```powershell
+Get-Content logs\audit.log -Tail 20
+Get-Content logs\metrics.log -Tail 5
+```
+
+## 9. Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
@@ -108,8 +135,9 @@ Try these one at a time and watch the sidebar trace log show which tool fired:
 | Guardrail blocks a legitimate question | Injection heuristic is a simple regex list | Tune `INJECTION_PATTERNS` in `guardrails.py` |
 | PII still visible in answer | Redaction only covers email/phone/card patterns | Extend `redact_pii()` regexes in `guardrails.py` |
 | "Rate limit exceeded" too easily | Default is 10 req/60s per session | Adjust `RateLimiter(max_requests=..., window_seconds=...)` in `agent.py` |
+| `logs/` folder missing | It's created on first run, not shipped in the repo | Just run the app once; it auto-creates `logs/` |
 
-## 9. Exercises for trainees
+## 10. Exercises for trainees
 
 1. Add a 4th "risky" tool (e.g. `issue_refund`) and add a human-in-the-loop
    confirmation step before it executes.
@@ -118,3 +146,5 @@ Try these one at a time and watch the sidebar trace log show which tool fired:
 3. Swap `search_store_policy`'s keyword search for real embeddings using the
    vector store from the earlier RAG lab.
 4. Point `ObservabilityHandler` at LangSmith and compare the trace UI.
+5. Write a small script that reads `logs/metrics.log` and prints the average
+   latency and total estimated cost across all recorded turns.

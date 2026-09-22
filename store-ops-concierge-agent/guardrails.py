@@ -6,6 +6,10 @@ in-memory rate limiter.
 These are deliberately implemented with plain regex/heuristics (no external
 guardrail service) to keep the lab dependency-free. The README explains
 where you would swap in a production-grade guardrail service.
+
+Every guardrail check produces a structured GuardrailEvent (which guardrail
+ran, whether it fired, and *why*) so the UI and audit log can show exactly
+what happened and the reasoning behind it - not just a blocked/allowed flag.
 """
 
 import re
@@ -15,11 +19,24 @@ from dataclasses import dataclass, field
 
 
 # ---------------------------------------------------------------------------
+# Structured guardrail event
+# ---------------------------------------------------------------------------
+@dataclass
+class GuardrailEvent:
+    guardrail: str   # human-readable guardrail name, e.g. "Prompt Injection Guard"
+    fired: bool      # whether this guardrail took action (blocked/redacted)
+    reason: str      # why it fired (or why it didn't, when useful for audit)
+    stage: str       # "input" | "output" | "rate_limit"
+
+
+# ---------------------------------------------------------------------------
 # PII detection / redaction
 # ---------------------------------------------------------------------------
 EMAIL_RE = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 PHONE_RE = re.compile(r"(\+?\d{1,2}[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}")
 CREDIT_CARD_RE = re.compile(r"\b(?:\d[ -]*?){13,16}\b")
+
+PII_LABELS = {"email": "email address", "phone": "phone number", "card": "card-like number"}
 
 
 def redact_pii(text: str) -> tuple[str, list[str]]:
@@ -55,8 +72,12 @@ INJECTION_PATTERNS = [
 INJECTION_RE = re.compile("|".join(INJECTION_PATTERNS), re.IGNORECASE)
 
 
-def detect_prompt_injection(text: str) -> bool:
-    return bool(INJECTION_RE.search(text))
+def detect_prompt_injection(text: str) -> str | None:
+    """Returns the matched substring if the text looks like a prompt-injection
+    / jailbreak attempt, otherwise None. Returning the match (not just a bool)
+    lets callers explain *why* the guardrail fired."""
+    match = INJECTION_RE.search(text)
+    return match.group(0) if match else None
 
 
 # ---------------------------------------------------------------------------
@@ -67,15 +88,21 @@ class GuardResult:
     allowed: bool
     reason: str = ""
     sanitized_text: str = ""
-    events: list[str] = field(default_factory=list)
+    events: list[GuardrailEvent] = field(default_factory=list)
 
 
 def input_guard(user_input: str) -> GuardResult:
     """Runs before the agent sees the user's message."""
-    events = []
+    events: list[GuardrailEvent] = []
 
-    if detect_prompt_injection(user_input):
-        events.append("prompt_injection_detected")
+    injection_match = detect_prompt_injection(user_input)
+    if injection_match:
+        reason = (
+            f"Matched a known instruction-override / jailbreak phrasing pattern: "
+            f"'{injection_match}'. Requests that try to make the assistant ignore "
+            f"its rules or reveal its system prompt are blocked outright."
+        )
+        events.append(GuardrailEvent("Prompt Injection Guard", True, reason, "input"))
         return GuardResult(
             allowed=False,
             reason="Your message looks like it is trying to override the assistant's "
@@ -83,10 +110,20 @@ def input_guard(user_input: str) -> GuardResult:
             sanitized_text=user_input,
             events=events,
         )
+    events.append(GuardrailEvent(
+        "Prompt Injection Guard", False,
+        "No instruction-override or jailbreak phrasing detected in the input.", "input",
+    ))
 
     sanitized, redactions = redact_pii(user_input)
     if redactions:
-        events.append(f"input_pii_redacted:{','.join(redactions)}")
+        labels = ", ".join(PII_LABELS.get(r, r) for r in redactions)
+        reason = f"Detected and masked {labels} in the user's message before it reached the LLM."
+        events.append(GuardrailEvent("Input PII Redaction", True, reason, "input"))
+    else:
+        events.append(GuardrailEvent(
+            "Input PII Redaction", False, "No email, phone, or card-like patterns found in the input.", "input",
+        ))
 
     return GuardResult(allowed=True, sanitized_text=sanitized, events=events)
 
@@ -96,10 +133,19 @@ def input_guard(user_input: str) -> GuardResult:
 # ---------------------------------------------------------------------------
 def output_guard(agent_response: str) -> GuardResult:
     """Runs on the agent's final answer before it is shown to the user."""
-    events = []
+    events: list[GuardrailEvent] = []
     sanitized, redactions = redact_pii(agent_response)
     if redactions:
-        events.append(f"output_pii_redacted:{','.join(redactions)}")
+        labels = ", ".join(PII_LABELS.get(r, r) for r in redactions)
+        reason = (
+            f"The agent's draft answer contained {labels} (likely pulled from a tool "
+            f"result, e.g. an order record) - masked before showing it to the user."
+        )
+        events.append(GuardrailEvent("Output PII Redaction", True, reason, "output"))
+    else:
+        events.append(GuardrailEvent(
+            "Output PII Redaction", False, "No email, phone, or card-like patterns found in the draft answer.", "output",
+        ))
     return GuardResult(allowed=True, sanitized_text=sanitized, events=events)
 
 
@@ -122,3 +168,17 @@ class RateLimiter:
             return False, 0
         window.append(now)
         return True, self.max_requests - len(window)
+
+    def rate_limit_event(self, session_id: str, allowed: bool) -> GuardrailEvent:
+        if allowed:
+            return GuardrailEvent(
+                "Rate Limiter", False,
+                f"Session '{session_id}' is within the {self.max_requests} req / "
+                f"{self.window_seconds}s limit.", "rate_limit",
+            )
+        return GuardrailEvent(
+            "Rate Limiter", True,
+            f"Session '{session_id}' exceeded {self.max_requests} requests within "
+            f"{self.window_seconds} seconds; the request was blocked before reaching the agent.",
+            "rate_limit",
+        )

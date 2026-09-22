@@ -32,6 +32,7 @@ class TraceEvent:
     name: str
     detail: str
     latency_ms: float
+    agent_name: str = "unknown_agent"
     tokens_in: int = 0
     tokens_out: int = 0
     cost_usd: float = 0.0
@@ -41,7 +42,8 @@ class TraceEvent:
 class ObservabilityHandler(BaseCallbackHandler):
     """Collects trace events for one agent invocation."""
 
-    def __init__(self):
+    def __init__(self, agent_name: str = "Store Ops Concierge"):
+        self.agent_name = agent_name
         self.events: list[TraceEvent] = []
         self._starts: dict[str, float] = {}
 
@@ -66,6 +68,7 @@ class ObservabilityHandler(BaseCallbackHandler):
                 name="chat_model_call",
                 detail=text[:200],
                 latency_ms=latency_ms,
+                agent_name=self.agent_name,
                 tokens_in=tokens_in,
                 tokens_out=tokens_out,
                 cost_usd=cost,
@@ -87,6 +90,7 @@ class ObservabilityHandler(BaseCallbackHandler):
                 name=getattr(self, "_pending_tool_name", "unknown_tool"),
                 detail=f"input={getattr(self, '_pending_input', '')!r} -> output={str(output)[:200]!r}",
                 latency_ms=latency_ms,
+                agent_name=self.agent_name,
             )
         )
 
@@ -99,11 +103,24 @@ class ObservabilityHandler(BaseCallbackHandler):
                 name=getattr(self, "_pending_tool_name", "unknown_tool"),
                 detail=f"ERROR: {error}",
                 latency_ms=latency_ms,
+                agent_name=self.agent_name,
             )
         )
 
     def add_guardrail_event(self, name: str, detail: str) -> None:
-        self.events.append(TraceEvent(kind="guardrail", name=name, detail=detail, latency_ms=0.0))
+        self.events.append(
+            TraceEvent(kind="guardrail", name=name, detail=detail, latency_ms=0.0, agent_name=self.agent_name)
+        )
+
+    def tool_call_summaries(self) -> list[dict]:
+        """Returns a compact list of {agent_name, tool_name, detail} for every
+        tool call made during this invocation - used to answer 'which tool
+        call was used by which agent'."""
+        return [
+            {"agent_name": e.agent_name, "tool_name": e.name, "detail": e.detail}
+            for e in self.events
+            if e.kind == "tool"
+        ]
 
     def totals(self) -> dict:
         return {

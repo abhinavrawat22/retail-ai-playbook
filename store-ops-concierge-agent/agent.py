@@ -16,8 +16,11 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 
 from tools import ALL_TOOLS
-from guardrails import input_guard, output_guard, RateLimiter
+from guardrails import input_guard, output_guard, RateLimiter, GuardrailEvent
 from observability import ObservabilityHandler
+from audit import log_audit_event, log_metrics_event
+
+AGENT_NAME = "Store Ops Concierge"
 
 SYSTEM_PROMPT = """You are the Store Ops Concierge, a retail operations assistant.
 
@@ -63,50 +66,120 @@ def build_agent_executor() -> AgentExecutor:
 def run_agent(executor: AgentExecutor, session_id: str, user_input: str, chat_history: list):
     """Runs one turn end-to-end: rate limit -> input guard -> agent -> output guard.
 
-    Returns a dict with keys: allowed, final_answer, guard_events, trace_events, totals
-    """
-    obs_handler = ObservabilityHandler()
+    Every stage is recorded three ways:
+    - as a `GuardrailEvent`/`TraceEvent` for the live UI
+    - as an audit log record (logs/audit.log) for a full activity trail
+    - as a human-readable `workflow_steps` entry explaining what happened, in order
 
+    Returns a dict with keys: allowed, final_answer, guard_events, trace_events,
+    totals, workflow_steps, tool_calls (agent+tool attribution list)
+    """
+    obs_handler = ObservabilityHandler(agent_name=AGENT_NAME)
+    workflow_steps: list[str] = []
+    all_guard_events: list[GuardrailEvent] = []
+
+    log_audit_event("user_query_received", session_id, AGENT_NAME, {"user_input": user_input[:300]})
+
+    # --- Step 1: rate limiter -------------------------------------------------
     allowed, remaining = rate_limiter.allow(session_id)
+    rl_event = rate_limiter.rate_limit_event(session_id, allowed)
+    all_guard_events.append(rl_event)
+    log_audit_event("guardrail_decision", session_id, AGENT_NAME, {
+        "guardrail": rl_event.guardrail, "fired": rl_event.fired, "reason": rl_event.reason,
+    })
+    workflow_steps.append(
+        f"1. Rate limiter checked for session '{session_id}': "
+        + ("blocked - " + rl_event.reason if not allowed else f"allowed, {remaining} requests remaining in window.")
+    )
+
     if not allowed:
-        obs_handler.add_guardrail_event("rate_limit_exceeded", "Too many requests in the last 60s")
+        obs_handler.add_guardrail_event(rl_event.guardrail, rl_event.reason)
+        totals = obs_handler.totals()
+        log_metrics_event(session_id, AGENT_NAME, totals, [], [rl_event.guardrail])
         return {
             "allowed": False,
             "final_answer": "You've hit the rate limit (10 requests/min). Please wait a moment and try again.",
-            "guard_events": ["rate_limit_exceeded"],
+            "guard_events": all_guard_events,
             "trace_events": obs_handler.events,
-            "totals": obs_handler.totals(),
+            "totals": totals,
+            "workflow_steps": workflow_steps,
+            "tool_calls": [],
         }
 
+    # --- Step 2: input guardrail (prompt injection + PII) ---------------------
     in_result = input_guard(user_input)
-    if in_result.events:
-        for e in in_result.events:
-            obs_handler.add_guardrail_event(e, user_input[:100])
+    all_guard_events.extend(in_result.events)
+    for e in in_result.events:
+        obs_handler.add_guardrail_event(e.guardrail, e.reason)
+        log_audit_event("guardrail_decision", session_id, AGENT_NAME, {
+            "guardrail": e.guardrail, "fired": e.fired, "reason": e.reason, "stage": e.stage,
+        })
+    fired_input = [e.guardrail for e in in_result.events if e.fired]
+    workflow_steps.append(
+        "2. Input guardrails evaluated: "
+        + (f"FIRED -> {', '.join(fired_input)}." if fired_input else "no issues detected, message passed through.")
+    )
 
     if not in_result.allowed:
+        totals = obs_handler.totals()
+        log_metrics_event(session_id, AGENT_NAME, totals, [], [e.guardrail for e in all_guard_events if e.fired])
         return {
             "allowed": False,
             "final_answer": in_result.reason,
-            "guard_events": in_result.events,
+            "guard_events": all_guard_events,
             "trace_events": obs_handler.events,
-            "totals": obs_handler.totals(),
+            "totals": totals,
+            "workflow_steps": workflow_steps,
+            "tool_calls": [],
         }
 
+    # --- Step 3: agent executor (LLM reasoning + tool-calling loop) -----------
     result = executor.invoke(
         {"input": in_result.sanitized_text, "chat_history": chat_history},
         config={"callbacks": [obs_handler]},
     )
     raw_output = result.get("output", "")
+    tool_calls = obs_handler.tool_call_summaries()
+    for tc in tool_calls:
+        log_audit_event("tool_call", session_id, tc["agent_name"], {"tool_name": tc["tool_name"], "detail": tc["detail"]})
 
+    if tool_calls:
+        called = ", ".join(f"{tc['tool_name']} (by {tc['agent_name']})" for tc in tool_calls)
+        workflow_steps.append(f"3. {AGENT_NAME} reasoned about the request and called: {called}.")
+    else:
+        workflow_steps.append(f"3. {AGENT_NAME} answered directly without needing any tool calls.")
+
+    # --- Step 4: output guardrail (PII redaction on final answer) -------------
     out_result = output_guard(raw_output)
-    if out_result.events:
-        for e in out_result.events:
-            obs_handler.add_guardrail_event(e, raw_output[:100])
+    all_guard_events.extend(out_result.events)
+    for e in out_result.events:
+        obs_handler.add_guardrail_event(e.guardrail, e.reason)
+        log_audit_event("guardrail_decision", session_id, AGENT_NAME, {
+            "guardrail": e.guardrail, "fired": e.fired, "reason": e.reason, "stage": e.stage,
+        })
+    fired_output = [e.guardrail for e in out_result.events if e.fired]
+    workflow_steps.append(
+        "4. Output guardrails evaluated: "
+        + (f"FIRED -> {', '.join(fired_output)}." if fired_output else "no issues detected, answer passed through unchanged.")
+    )
+    workflow_steps.append("5. Final, guardrail-checked answer returned to the user and logged to audit/metrics.")
+
+    totals = obs_handler.totals()
+    log_audit_event("agent_response", session_id, AGENT_NAME, {
+        "final_answer": out_result.sanitized_text[:300], "totals": totals,
+    })
+    log_metrics_event(
+        session_id, AGENT_NAME, totals,
+        [tc["tool_name"] for tc in tool_calls],
+        [e.guardrail for e in all_guard_events if e.fired],
+    )
 
     return {
         "allowed": True,
         "final_answer": out_result.sanitized_text,
-        "guard_events": in_result.events + out_result.events,
+        "guard_events": all_guard_events,
         "trace_events": obs_handler.events,
-        "totals": obs_handler.totals(),
+        "totals": totals,
+        "workflow_steps": workflow_steps,
+        "tool_calls": tool_calls,
     }
