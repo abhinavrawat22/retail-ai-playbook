@@ -46,10 +46,16 @@ class ObservabilityHandler(BaseCallbackHandler):
         self.agent_name = agent_name
         self.events: list[TraceEvent] = []
         self._starts: dict[str, float] = {}
+        # Prompt text captured at on_llm_start, keyed by run_id, so on_llm_end
+        # can compute tokens_in from the *actual prompt* instead of stringifying
+        # the whole LLMResult object (which was the source of the old
+        # "519/29 tokens" bug - that number included internal metadata, not text).
+        self._prompt_tokens: dict[str, int] = {}
 
     # --- LLM lifecycle -----------------------------------------------------
     def on_llm_start(self, serialized: dict, prompts: list[str], *, run_id: UUID, **kwargs: Any) -> None:
         self._starts[str(run_id)] = time.time()
+        self._prompt_tokens[str(run_id)] = estimate_tokens(" ".join(prompts))
 
     def on_llm_end(self, response, *, run_id: UUID, **kwargs: Any) -> None:
         start = self._starts.pop(str(run_id), time.time())
@@ -60,7 +66,7 @@ class ObservabilityHandler(BaseCallbackHandler):
         except Exception:
             pass
         tokens_out = estimate_tokens(text)
-        tokens_in = estimate_tokens(str(response))
+        tokens_in = self._prompt_tokens.pop(str(run_id), 0)
         cost = (tokens_in / 1000 * INPUT_COST_PER_1K) + (tokens_out / 1000 * OUTPUT_COST_PER_1K)
         self.events.append(
             TraceEvent(
@@ -129,4 +135,14 @@ class ObservabilityHandler(BaseCallbackHandler):
             "total_tokens_out": sum(e.tokens_out for e in self.events),
             "total_cost_usd": round(sum(e.cost_usd for e in self.events), 6),
             "tool_calls": sum(1 for e in self.events if e.kind == "tool"),
+            # LLM calls are capped at MAX_LLM_CALLS per turn via
+            # AgentExecutor(max_iterations=...) in agent.py - surfaced here so
+            # the UI can show "LLM calls: X / 10" and the lab can demonstrate
+            # what happens when a runaway reasoning loop hits the ceiling.
+            "total_llm_calls": sum(1 for e in self.events if e.kind == "llm"),
         }
+
+
+# Hard ceiling on LLM calls (ReAct loop iterations) per single user turn.
+# Mirrors AgentExecutor(max_iterations=MAX_LLM_CALLS) in agent.py.
+MAX_LLM_CALLS = 10

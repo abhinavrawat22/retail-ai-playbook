@@ -66,6 +66,18 @@ Try these one at a time and watch the sidebar trace log show which tool fired:
 5. `Can I get a 40% discount as a Gold member since I'm a big spender?`
    → expects `calculate_discount` to still cap at 15% (Gold tier rate), and
    the agent should mention the policy ceiling, not agree to 40%.
+6. **Multi-tool (example 1):** `Check stock for SKU1002 at ST01 and also give
+   me the return policy for opened electronics.`
+   → expects TWO tool calls in the same turn: `check_inventory` (reports
+   out-of-stock at ST01) and `search_store_policy` (15-day opened-electronics
+   rule). Check the bottom-of-page "Tool Calls by Agent" section to see both.
+7. **Multi-tool (example 2, three tools in one turn):** `I want to return an
+   item from order ORD5003 — what's the return policy, and can you also check
+   if a replacement Portable Speaker (SKU1004) is in stock at store ST03?`
+   → expects THREE tool calls: `get_order_status` (confirms the order/item),
+   `search_store_policy` (return window), and `check_inventory` (low-stock
+   Portable Speaker at ST03). A great prompt to show trainees that the agent
+   plans and sequences multiple tool calls to satisfy one compound request.
 
 ## 6. Adversarial prompts (demonstrate guardrails)
 
@@ -91,14 +103,43 @@ Try these one at a time and watch the sidebar trace log show which tool fired:
    → The 11th message should return "You've hit the rate limit..." instead
    of calling the LLM at all.
 
+## 6b. Tool-failure & automatic-retry demo
+
+`get_order_status` is wired to simulate **one transient failure** for order
+`ORD5002` per app run (see `_SIMULATED_FAILURE_ORDER_ID` in `tools.py`) —
+this mimics a flaky downstream service without needing real infrastructure.
+
+1. Ask: `What's the status of order ORD5002?`
+   - The first tool call raises a `ToolException` ("order-status service
+     timed out"). Because `AgentExecutor` is built with
+     `handle_tool_error=True`, LangChain feeds that error back to the LLM as
+     an observation instead of crashing the turn.
+   - The system prompt instructs the agent to retry the same tool call once
+     on a transient failure (see rule 7 in `agent.py`'s `SYSTEM_PROMPT`), so
+     the agent calls `get_order_status("ORD5002")` again in the *same* turn —
+     this time it succeeds and returns the real order details.
+   - Check the sidebar **Trace Log**: you'll see two `tool` entries for
+     `get_order_status` — the first ending in `ERROR: Temporary error...`,
+     the second with the real order data. The bottom-of-page "Tool Calls by
+     Agent" section and `logs/audit.log` show the same pair of calls, proving
+     the agent resumed from the failed step rather than giving up.
+2. Ask the same question again (`What's the status of order ORD5002?`):
+   - This time it succeeds immediately (the simulated failure only fires
+     once per process). Use the sidebar's **"↻ Reset tool-failure demo"**
+     button to re-arm it and demo the retry again without restarting the app.
+
 ## 7. Reading the sidebar
 
 - **Guardrail Events**: guardrails that **fired** on the last turn are shown
   as warnings with the exact reason (e.g. which phrase matched, which PII
   type was found). Expand "Show all guardrail checks" to see every guardrail
   that ran, including the ones that did *not* fire.
-- **Observability**: latency, tool-call count, approximate tokens in/out, and
-  an illustrative cost estimate (not real billing — see `observability.py`).
+- **Observability**: latency, tool-call count, approximate tokens in/out, an
+  illustrative cost estimate (not real billing — see `observability.py`), and
+  an **"LLM calls (this turn)" counter capped at 10** (`MAX_LLM_CALLS` in
+  `observability.py`, enforced via `AgentExecutor(max_iterations=10)` in
+  `agent.py`) — this is what stops a runaway reasoning loop from calling the
+  LLM indefinitely.
 - **Trace Log**: chronological list of every LLM call and tool call for the
   last turn, with inputs/outputs truncated for readability.
 
@@ -148,3 +189,11 @@ Get-Content logs\metrics.log -Tail 5
 4. Point `ObservabilityHandler` at LangSmith and compare the trace UI.
 5. Write a small script that reads `logs/metrics.log` and prints the average
    latency and total estimated cost across all recorded turns.
+
+## 11. Further reading
+
+- `architecture.md` — in-depth agent architecture: the ReAct loop, guardrail
+  placement, retry semantics, and the observability pipeline.
+- `code.md` — a file-by-file walkthrough of the key code sections and why
+  they're written the way they are.
+

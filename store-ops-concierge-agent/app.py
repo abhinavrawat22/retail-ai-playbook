@@ -16,10 +16,58 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from agent import build_agent_executor, run_agent
+from observability import MAX_LLM_CALLS
+from tools import reset_simulated_failures
 
 load_dotenv()
 
-st.set_page_config(page_title="Store Ops Concierge", page_icon="🛒", layout="wide")
+st.set_page_config(page_title="Store Ops Concierge · AI Playground", page_icon="🛒", layout="wide")
+
+# --- Dark theme polish (native theme handles the base colors via
+# .streamlit/config.toml; this CSS only adds the hero/footer/badge styling
+# that Streamlit's theme system doesn't expose directly). --------------------
+st.markdown(
+    """
+    <style>
+    .hero-wrap { text-align: center; padding: 1.2rem 0 0.4rem 0; }
+    .hero-badge {
+        display: inline-block; padding: 0.35rem 1.1rem; border-radius: 999px;
+        border: 1px solid #2dd4bf55; background: #0f172a; color: #2dd4bf;
+        font-family: 'Courier New', monospace; letter-spacing: 0.12em;
+        font-size: 0.78rem; font-weight: 600; margin-bottom: 0.9rem;
+    }
+    .hero-title {
+        font-family: 'Courier New', monospace; font-weight: 700;
+        font-size: 2.6rem; margin: 0.2rem 0;
+        background: linear-gradient(90deg, #2dd4bf 0%, #60a5fa 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .hero-subtitle { color: #94a3b8; font-size: 1rem; margin-bottom: 0.9rem; }
+    .hero-credit {
+        display: inline-block; padding: 0.3rem 1rem; border-radius: 999px;
+        background: #0f172a; border: 1px solid #1e293b; color: #94a3b8;
+        font-size: 0.85rem;
+    }
+    .hero-credit b { color: #2dd4bf; }
+    .section-label {
+        color: #2dd4bf; letter-spacing: 0.14em; font-size: 0.78rem;
+        font-family: 'Courier New', monospace; font-weight: 700; margin-bottom: 0.3rem;
+    }
+    .footer-wrap {
+        margin-top: 2.2rem; padding: 1.6rem 1rem 1.1rem 1rem;
+        border-top: 1px solid #1e293b; text-align: center;
+    }
+    .footer-quote { color: #cbd5e1; font-style: italic; font-size: 1.05rem; margin-bottom: 0.4rem; }
+    .footer-credit { color: #64748b; font-size: 0.9rem; }
+    .footer-playground {
+        color: #2dd4bf; font-family: 'Courier New', monospace; font-weight: 700;
+        letter-spacing: 0.14em; font-size: 0.85rem; text-align: left; margin-top: 1.2rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # --- Session state init ----------------------------------------------------
 if "session_id" not in st.session_state:
@@ -51,6 +99,10 @@ with st.sidebar:
 
     st.caption("Model: " + os.environ.get("OPENAI_MODEL", "gpt-4o-mini"))
 
+    if st.button("↻ Reset tool-failure demo", help="Re-arms the one-time simulated failure on order ORD5002 (see USAGE.md)"):
+        reset_simulated_failures()
+        st.toast("Simulated failure re-armed for order ORD5002.")
+
     st.divider()
     st.title("🛡️ Guardrail Events (last turn)")
     fired = [e for e in st.session_state.last_guard_events if e.fired]
@@ -77,6 +129,10 @@ with st.sidebar:
         c2.metric("Tool calls", totals.get("tool_calls", 0))
         c1.metric("Tokens in/out", f"{totals.get('total_tokens_in', 0)}/{totals.get('total_tokens_out', 0)}")
         c2.metric("Est. cost", f"${totals.get('total_cost_usd', 0):.6f}")
+        llm_calls = totals.get("total_llm_calls", 0)
+        st.metric("LLM calls (this turn)", f"{llm_calls} / {MAX_LLM_CALLS}")
+        if llm_calls >= MAX_LLM_CALLS:
+            st.error("Hit the max-iterations ceiling - the agent stopped reasoning to avoid a runaway loop.")
     else:
         st.caption("Metrics appear after the first message.")
 
@@ -90,8 +146,22 @@ with st.sidebar:
     else:
         st.caption("No trace events yet.")
 
+# --- Hero header -------------------------------------------------------------
+st.markdown(
+    """
+    <div class="hero-wrap">
+        <div class="hero-badge">🤖 AGENTIC AI &middot; MULTI-TOOL REASONING</div>
+        <div class="hero-title">Store Ops Concierge</div>
+        <div class="hero-subtitle">Inventory &middot; Orders &middot; Discounts &middot; Policy &mdash; one agent, four tools, guarded end to end</div>
+        <div class="hero-credit">Built by <b>Abhinav Rawat</b> &middot; AI Playground</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+st.divider()
+
 # --- Main chat area -------------------------------------------------------
-st.title("🛒 Store Ops Concierge")
+st.markdown('<div class="section-label">ASK THE CONCIERGE</div>', unsafe_allow_html=True)
 st.caption(
     "Ask about inventory, order status, discounts, or store policy. "
     "Try an adversarial prompt to see the guardrails in action - see USAGE.md."
@@ -163,4 +233,16 @@ else:
 st.caption(
     "Audit trail (every guardrail decision, tool call, and response) is appended to "
     "`logs/audit.log`; per-turn performance metrics are appended to `logs/metrics.log`."
+)
+
+# --- Footer ------------------------------------------------------------------
+st.markdown(
+    """
+    <div class="footer-wrap">
+        <div class="footer-quote">"Guardrails aren't limits on intelligence &mdash; they're what make it trustworthy enough to ship."</div>
+        <div class="footer-credit">Abhinav Rawat &middot; Enterprise AI &amp; Technology Leader</div>
+    </div>
+    <div class="footer-playground">AI PLAYGROUND</div>
+    """,
+    unsafe_allow_html=True,
 )

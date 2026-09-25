@@ -7,7 +7,9 @@ reasons about which of several tools to call, calls them, and returns a
 guarded, observed answer through a Streamlit chat UI.
 
 No database, no vector store, no external services required — everything
-runs in-memory so the lab has zero infrastructure setup.
+runs in-memory so the lab has zero infrastructure setup. The UI is a
+dark-themed, "AI Playground"-branded Streamlit app (see `.streamlit/config.toml`
+and the hero/footer sections in `app.py`).
 
 ---
 
@@ -66,8 +68,13 @@ flowchart TD
    `AgentExecutor`) sends the system prompt + conversation + user message to
    the LLM. The LLM decides whether to call one or more tools, and the
    executor loops: call tool → feed result back to the LLM → repeat until a
-   final answer is produced (or `max_iterations` is hit, which prevents
-   infinite tool-call loops).
+   final answer is produced, or the **10-LLM-call ceiling** (`max_iterations`,
+   `MAX_LLM_CALLS` in `observability.py`) is hit, which prevents a runaway
+   reasoning loop. If a tool raises an error, each tool's
+   `handle_tool_error=True` (set in `tools.py`) feeds that error back to the
+   model as an observation instead of crashing the turn, and the system
+   prompt instructs the model to retry the same tool call once — see
+   `architecture.md` section 3.3 for the full retry demo.
 5. **Tools** (`tools.py`) each read only the in-memory data they need
    (`data.py`) and return structured text. `calculate_discount` enforces the
    `MAX_DISCOUNT_PCT` ceiling in code — never relying on the LLM to "remember"
@@ -77,10 +84,12 @@ flowchart TD
    record) before it's shown to the user.
 7. **Observability** (`observability.ObservabilityHandler`) is a LangChain
    callback handler attached to the executor invocation. It records every
-   LLM call and tool call with latency, an approximate token count, an
-   illustrative cost estimate, and **which agent made which tool call**
-   (`tool_call_summaries()`), plus every guardrail action. This is rendered
-   live in the Streamlit sidebar as a trace log.
+   LLM call and tool call with latency, an accurate token estimate (computed
+   from the real prompt/completion text, not a stringified result object), an
+   illustrative cost estimate, a running **"LLM calls: X / 10"** counter, and
+   **which agent made which tool call** (`tool_call_summaries()`), plus every
+   guardrail action. This is rendered live in the Streamlit sidebar as a
+   trace log.
 8. **Audit + metrics logging** (`audit.py`) writes two JSON-lines log files
    under `logs/`: `audit.log` records every notable activity (query
    received, each guardrail decision with its fired/not-fired reason, each
@@ -103,17 +112,23 @@ flowchart TD
 store-ops-concierge-agent/
 ├── data.py            # In-memory inventory/orders/customers/policy "database"
 ├── tools.py            # The 4 LangChain @tool functions the agent can call
+│                        # (includes a simulated one-time tool-failure demo)
 ├── guardrails.py       # Input/output guardrails + PII redaction + rate limiter
 │                        # (each check returns a structured GuardrailEvent: name, fired, reason)
-├── observability.py    # LangChain callback handler: trace events, latency, cost, agent/tool attribution
+├── observability.py    # LangChain callback handler: trace events, latency, cost,
+│                        # agent/tool attribution, and the 10-call LLM ceiling
 ├── audit.py             # Audit log (logs/audit.log) + metrics log (logs/metrics.log), JSON-lines
 ├── agent.py            # System prompt + agent/executor wiring + run_agent() entrypoint
 │                        # (also builds the human-readable workflow_steps trace)
-├── app.py              # Streamlit UI (chat + sidebar + bottom-of-page tool/workflow sections)
+├── app.py              # Streamlit UI (dark-themed hero + chat + sidebar + bottom-of-page sections + footer)
+├── .streamlit/
+│   └── config.toml     # Native Streamlit dark theme (colors, monospace font)
 ├── requirements.txt
 ├── .env.example         # Copy to .env and add your OPENAI_API_KEY
 ├── README.md            # This file (architecture/flow/code)
-└── USAGE.md             # Step-by-step guide + sample & adversarial prompts
+├── USAGE.md             # Step-by-step guide + sample & adversarial prompts
+├── architecture.md      # In-depth agent architecture (ReAct loop, retries, observability)
+└── code.md              # File-by-file walkthrough of key code sections
 ```
 
 ### Why this structure (best practices)
@@ -201,4 +216,6 @@ types were found) rather than just a blocked/allowed flag.
 - Add a human-in-the-loop confirmation step before any tool marked
   "high risk" (there are none in this lab, but it's a natural next lesson).
 
-See **USAGE.md** for how to run it and a set of prompts to test.
+See **USAGE.md** for how to run it and a set of prompts to test, **architecture.md**
+for an in-depth look at the agent's reasoning loop/guardrail placement/retry
+semantics, and **code.md** for a file-by-file code walkthrough.

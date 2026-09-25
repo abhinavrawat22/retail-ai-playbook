@@ -8,9 +8,17 @@ best practice for agent tools: never let the model "fill in" data that
 should come from a system of record.
 """
 
-from langchain_core.tools import tool
+from langchain_core.tools import tool, ToolException
 
 from data import INVENTORY, ORDERS, CUSTOMERS, POLICIES, MAX_DISCOUNT_PCT
+
+# --- Simulated transient failure demo -------------------------------------
+# To demonstrate "tool call fails, agent retries and resumes from the failed
+# step" in a live workshop, this specific order ID fails exactly once per
+# process lifetime (module-level state), then succeeds on the very next
+# attempt for the same ID - mimicking a flaky downstream order-status API.
+_SIMULATED_FAILURE_ORDER_ID = "ORD5002"
+_simulated_failure_triggered: dict[str, bool] = {}
 
 
 @tool
@@ -35,8 +43,21 @@ def get_order_status(order_id: str) -> str:
     """Look up the status, items, and expected delivery date for a given order ID.
     Use this whenever the user asks 'where is my order' or about order status,
     delivery date, or order total. Do NOT invent order details."""
+    normalized_id = order_id.upper()
+
+    # Simulated transient failure demo: the first call for this specific order
+    # ID raises, so the workshop can show the agent catching a tool error and
+    # retrying on its own. Every call after the first (for this ID, in this
+    # process) succeeds normally.
+    if normalized_id == _SIMULATED_FAILURE_ORDER_ID and not _simulated_failure_triggered.get(normalized_id):
+        _simulated_failure_triggered[normalized_id] = True
+        raise ToolException(
+            f"Temporary error: order-status service timed out while looking up "
+            f"'{order_id}'. This is a simulated transient failure for the retry demo."
+        )
+
     for order in ORDERS:
-        if order["order_id"].upper() == order_id.upper():
+        if order["order_id"].upper() == normalized_id:
             return (
                 f"Order {order['order_id']}: status={order['status']}, "
                 f"items={order['items']}, total=${order['total']}, "
@@ -86,3 +107,19 @@ def search_store_policy(query: str) -> str:
 
 
 ALL_TOOLS = [check_inventory, get_order_status, calculate_discount, search_store_policy]
+
+# Enable per-tool error handling: if any tool raises (e.g. get_order_status's
+# simulated transient failure, or an unexpected bug), LangChain feeds the
+# exception text back into the agent's scratchpad as a normal observation
+# instead of letting it propagate up and crash executor.invoke(). This is what
+# lets the LLM "see" a tool error and decide to retry (see SYSTEM_PROMPT rule 7
+# in agent.py) rather than the whole turn failing.
+for _t in ALL_TOOLS:
+    _t.handle_tool_error = True
+
+
+def reset_simulated_failures() -> None:
+    """Resets the one-time simulated failure demo (see get_order_status) so it
+    can be re-triggered again in the same running process - used by the
+    Streamlit sidebar's 'Reset failure demo' button."""
+    _simulated_failure_triggered.clear()
